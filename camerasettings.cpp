@@ -21,7 +21,6 @@ void CameraSettings::setLatestValues(Ui::MainWindow *ui) {
     width = resList[0];
     height = resList[1];
     fps = QJsonValue::fromVariant(ui->fps_options->itemData(ui->fps_options->currentIndex())).toString();
-    IR = ui->ir_checkbox->isChecked();
 }
 
 QString CameraSettings::getCompression() {

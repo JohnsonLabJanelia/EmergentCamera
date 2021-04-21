@@ -163,26 +163,16 @@
     </property>
     <layout class="QFormLayout" name="formLayout">
      <item row="0" column="0">
-      <widget class="QLabel" name="cameraSourceLabel">
-       <property name="text">
-        <string>Camera Source</string>
-       </property>
-      </widget>
-     </item>
-     <item row="0" column="1">
-      <widget class="QComboBox" name="cameraSourceOptions"/>
-     </item>
-     <item row="1" column="0">
       <widget class="QLabel" name="resolutionLabel">
        <property name="text">
         <string>Video Resolution:</string>
        </property>
       </widget>
      </item>
-     <item row="1" column="1">
+     <item row="0" column="1">
       <widget class="QComboBox" name="resolutionOptions"/>
      </item>
-     <item row="2" column="0">
+     <item row="1" column="0">
       <widget class="QLabel" name="fpsLabel">
        <property name="text">
         <string>FPS:</string>
@@ -192,17 +182,17 @@
        </property>
       </widget>
      </item>
-     <item row="2" column="1">
+     <item row="1" column="1">
       <widget class="QComboBox" name="fps_options"/>
      </item>
-     <item row="6" column="0">
+     <item row="5" column="0">
       <widget class="QPushButton" name="saveLocation">
        <property name="text">
         <string>Save Location</string>
        </property>
       </widget>
      </item>
-     <item row="6" column="1">
+     <item row="5" column="1">
       <widget class="QLabel" name="saveFilename">
        <property name="text">
         <string/>
@@ -212,17 +202,17 @@
        </property>
       </widget>
      </item>
-     <item row="7" column="0">
+     <item row="6" column="0">
       <widget class="QLabel" name="compressionLabel">
        <property name="text">
-        <string>Compression Options:</string>
+        <string>H.264 Compressed</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
       </widget>
      </item>
-     <item row="7" column="1">
+     <item row="6" column="1">
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
         <widget class="QCheckBox" name="h264_checkbox">
@@ -233,23 +223,6 @@
        </item>
       </layout>
      </item>
-     <item row="8" column="0">
-      <widget class="QLabel" name="compressionLabel_3">
-       <property name="text">
-        <string>Enable IR:</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="8" column="1">
-      <widget class="QCheckBox" name="ir_checkbox">
-       <property name="text">
-        <string/>
-       </property>
-      </widget>
-     </item>
     </layout>
    </widget>
   </widget>
@@ -259,7 +232,7 @@
      <x>0</x>
      <y>0</y>
      <width>995</width>
-     <height>25</height>
+     <height>22</height>
     </rect>
    </property>
   </widget>
@@ -276,7 +249,4 @@
  <layoutdefault spacing="6" margin="11"/>
  <resources/>
  <connections/>
- <buttongroups>
-  <buttongroup name="buttonGroup"/>
- </buttongroups>
 </ui>

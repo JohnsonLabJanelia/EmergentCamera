@@ -12,12 +12,33 @@
 #include <QProcess>
 #include <EmergentCameraAPIs.h>
 #include <emergentframe.h>
+#include <emergentcameradef.h>
 #include <EvtParamAttribute.h>
 #include <gigevisiondeviceinfo.h>
 #include <EmergentCamera.h>
+#include <unistd.h>
 
 using namespace cv;
 using namespace Emergent;
+
+
+struct G {
+    pthread_mutex_t wrk_mtx;
+    worker_t worker[MAX_WORKERS];
+    bool done;
+    unsigned int frame_count;
+    unsigned int appended_frame_count;
+    unsigned int frame_to_recv;
+    unsigned int frame_id_prev;
+    CEmergentCamera *p_camera;
+    unsigned short id_prev;
+    unsigned int dropped_frames;
+    CEmergentAVIFile aviFile;
+    unsigned int width;
+    unsigned int height;
+    PIXEL_FORMAT pixel_type;
+    bool avi_open;
+} G;
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -29,20 +50,9 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->loadOptions->setToolTip(("Load Movie/Camera Options From JSON File"));
     ui->saveOptions->setToolTip(("Save Movie/Camera Options To JSON File"));
 
-    // combo box items
-    ui->cameraSourceOptions->addItem("Device Node 0 (video0)","Device Node 0 (video0)");
-    ui->cameraSourceOptions->addItem("Device Node 1 (video1)","Device Node 1 (video1)");
-    ui->cameraSourceOptions->addItem("Device Node 2 (video2)","Device Node 2 (video2)");
-
-    ui->resolutionOptions->addItem("640x480","640x480");
-    ui->resolutionOptions->addItem("1280x720","1280x720");
-    ui->resolutionOptions->addItem("1920x1080","1920x1080");
-
-    ui->fps_options->addItem("30","30");
-    ui->fps_options->addItem("60","60");
-    ui->fps_options->addItem("120","120");
-    ui->fps_options->addItem("240","240");
-   // DisplayPreview();
+    ui->resolutionOptions->addItem("3208x2200","3208x2200");
+    ui->fps_options->addItem("200","200");
+    ui->fps_options->addItem("100","100");
 }
 
 MainWindow::~MainWindow()
@@ -55,14 +65,335 @@ void MainWindow::ParseOptionsFile() {
 
 }
 
-// this method takes the current camera options and generates the appropriate
-// gstreamer pipeline command for capturing video
-QString MainWindow::GenerateGStreamerPipeline() {
-//    return "nvcamerasrc flicker=0 auto-exposure=1 exposure-time=0.0833 color-effect=1 wbmode=0 ! video/x-raw(memory:NVMM), width=(int)" + settings->getWidth() +
-  //              ", height=(int)" + settings->getHeight() + ", format=(string)I420, framerate=(fraction)" + settings->getFPS() +
-    //            "/1 ! nvvidconv flip-method=0 ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink";
+bool MainWindow::Process_Frame(CEmergentFrame* frame, CEmergentFrame* evtFrameConvert) {
+    bool converted = true;
 
-    return "filesrc location=/home/schauder/Downloads/1.mp4 ! decodebin name=dec ! queue ! videoconvert ! video/x-raw, format=(string)BGR ! appsink";
+    switch(frame->pixel_type)
+    {
+    case GVSP_PIX_MONO8:
+    {
+        //N/A: no convert required.
+        converted = false;
+        break;
+    }
+
+    case GVSP_PIX_BAYGB8:
+    {
+        //EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_NONE, EVT_COLOR_CONVERT_NEARESTNEIGHBOR_BGR); //Bayer interpolate
+        //Will do this raw for speed
+        //If converting then need to set G.aviFile.isColor = true; above.
+        converted = false;
+        break;
+    }
+
+    case GVSP_PIX_BAYGR8:
+    {
+        //EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_NONE, EVT_COLOR_CONVERT_NEARESTNEIGHBOR_BGR); //Bayer interpolate
+        //Will do this raw for speed
+        //If converting then need to set G.aviFile.isColor = true; above.
+        converted = false;
+        break;
+    }
+
+    case GVSP_PIX_BAYRG8:
+    {
+        //EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_NONE, EVT_COLOR_CONVERT_NEARESTNEIGHBOR_BGR); //Bayer interpolate
+        //Will do this raw for speed
+        //If converting then need to set G.aviFile.isColor = true; above.
+        converted = false;
+        break;
+    }
+
+    case GVSP_PIX_BAYBG8:
+    {
+        //EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_NONE, EVT_COLOR_CONVERT_NEARESTNEIGHBOR_BGR); //Bayer interpolate
+        //Will do this raw for speed
+        //If converting then need to set G.aviFile.isColor = true; above.
+        converted = false;
+        break;
+    }
+
+    case GVSP_PIX_BAYGB10:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_8BIT, EVT_COLOR_CONVERT_NEARESTNEIGHBOR_BGR); //8 bit for AVI, Bayer interpolate.
+        break;
+    }
+
+    case GVSP_PIX_BAYGR10:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_8BIT, EVT_COLOR_CONVERT_NEARESTNEIGHBOR_BGR); //8 bit for AVI, Bayer interpolate.
+        break;
+    }
+
+    case GVSP_PIX_BAYRG10:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_8BIT, EVT_COLOR_CONVERT_NEARESTNEIGHBOR_BGR); //8 bit for AVI, Bayer interpolate.
+        break;
+    }
+
+    case GVSP_PIX_BAYBG10:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_8BIT, EVT_COLOR_CONVERT_NEARESTNEIGHBOR_BGR); //8 bit for AVI, Bayer interpolate.
+        break;
+    }
+
+    case GVSP_PIX_BAYGB12:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_8BIT, EVT_COLOR_CONVERT_NEARESTNEIGHBOR_BGR); //8 bit for AVI, Bayer interpolate.
+        break;
+    }
+
+    case GVSP_PIX_BAYGR12:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_8BIT, EVT_COLOR_CONVERT_NEARESTNEIGHBOR_BGR); //8 bit for AVI, Bayer interpolate.
+        break;
+    }
+
+    case GVSP_PIX_BAYRG12:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_8BIT, EVT_COLOR_CONVERT_NEARESTNEIGHBOR_BGR); //8 bit for AVI, Bayer interpolate.
+        break;
+    }
+
+    case GVSP_PIX_BAYBG12:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_8BIT, EVT_COLOR_CONVERT_NEARESTNEIGHBOR_BGR); //8 bit for AVI, Bayer interpolate.
+        break;
+    }
+
+    case GVSP_PIX_RGB8:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_NONE, EVT_COLOR_CONVERT_TO_BGR);  //BGR for AVI
+        break;
+    }
+
+    case GVSP_PIX_RGB10:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_8BIT, EVT_COLOR_CONVERT_TO_BGR);  //8 bit for AVI, BGR for AVI
+        break;
+    }
+
+    case GVSP_PIX_RGB12:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_8BIT, EVT_COLOR_CONVERT_TO_BGR);  //8 bit for AVI, BGR for AVI
+        break;
+    }
+
+    case GVSP_PIX_BGR8:
+    {
+        //N/A: no convert required.
+        converted = false;
+        break;
+    }
+
+    case GVSP_PIX_BGR10:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_8BIT, EVT_COLOR_CONVERT_NONE);   //8 bit for AVI.
+        break;
+    }
+
+    case GVSP_PIX_BGR12:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_8BIT, EVT_COLOR_CONVERT_NONE);   //8 bit for AVI.
+        break;
+    }
+
+    case GVSP_PIX_YUV411_PACKED:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_NONE, EVT_COLOR_CONVERT_TO_BGR); //yuv unpack, yuv->bgr
+        break;
+    }
+
+    case GVSP_PIX_YUV422_PACKED:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_NONE, EVT_COLOR_CONVERT_TO_BGR); //yuv unpack, yuv->bgr
+        break;
+    }
+
+    case GVSP_PIX_YUV444_PACKED:
+    {
+        EVT_FrameConvert(frame, evtFrameConvert, EVT_CONVERT_NONE, EVT_COLOR_CONVERT_TO_BGR); //yuv unpack, yuv->bgr
+        break;
+    }
+
+    default:
+        break;
+    }
+
+    return converted;
+}
+
+void MainWindow::AVIWorkThread(void *work_struct) {
+
+    worker_t *wrk;
+    wrk = (worker_t *)work_struct;
+
+    int ReturnVal = 0;
+    int SUCCESS = 0;
+    CEmergentFrame evtFrameRecv, evtFrameConvert, *evtFrameForAVI = NULL;
+    bool buffer_used = false, buffer_recd = false, converted;
+    unsigned int frame_count_this = 0;
+
+    printf("Worker Thread %d Started...\n", wrk->worker_id);
+
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    CPU_SET(wrk->worker_id, &cpuset);
+    pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset);
+
+    //Our single convert buffer needs to be allocated.
+    evtFrameConvert.size_x = G.width;
+    evtFrameConvert.size_y = G.height;
+    evtFrameConvert.pixel_type = G.pixel_type;
+    evtFrameConvert.convertColor = EVT_COLOR_CONVERT_BILINEAR;
+    evtFrameConvert.convertBitDepth = EVT_CONVERT_8BIT;
+    EVT_AllocateFrameBuffer(G.p_camera, &evtFrameConvert, EVT_FRAME_BUFFER_DEFAULT);
+
+    while (!G.done) {
+        //Lock the frame resource.
+        pthread_mutex_lock(&G.wrk_mtx);
+
+        if (G.done) {
+            pthread_mutex_unlock(&G.wrk_mtx);
+            break;
+        }
+
+        //Re-queue frame if we have received one which is done being processed.
+        if (buffer_used) {
+            //Re-queue. Still need to re-queue if dropped frame due to frame_id check.
+            ReturnVal = EVT_CameraQueueFrame(G.p_camera, &evtFrameRecv);
+            if(ReturnVal) printf("EVT_CameraQueueFrame Error!\n");
+            buffer_used = false;
+        }
+
+        //Get the next buffer.
+        ReturnVal = EVT_CameraGetFrame(G.p_camera, &evtFrameRecv, EVT_INFINITE);
+        if (!ReturnVal) {
+            //Counting dropped frames through frame_id as redundant check.
+            //Ignore very first frame as id is unknown.
+            if (((evtFrameRecv.frame_id) != G.id_prev+1) && (G.frame_count != 0)) {
+                G.dropped_frames++;
+                buffer_recd = false;
+                //printf("\ndfe!\n");
+                //printf("%d %d %d\n", evtFrameRecv.frame_id, G.id_prev, G.frame_count);
+            } else {
+                G.frame_count++;
+                buffer_recd = true;
+            }
+        } else {
+            G.dropped_frames++;
+            buffer_recd = false;
+        }
+
+        //In GVSP there is no id 0 so when 16 bit id counter in camera is max then the next id is 1 so set prev id to 0 for math above.
+        if(evtFrameRecv.frame_id == 65535)
+            G.id_prev = 0;
+        else
+            G.id_prev = evtFrameRecv.frame_id;
+
+        //Indicate buffer has been used so at top of while we can re-queue.
+        buffer_used = true;
+
+        //Check if we have received ALL frames amongst worker threads.
+        if (G.frame_count >= G.frame_to_recv)
+            G.done = true;
+
+        //Others will change this when outside mtx so save it for AVI sake.
+        frame_count_this = G.frame_count;
+
+        //Unlock the frame resource so other workers can access.
+        pthread_mutex_unlock(&G.wrk_mtx);
+
+        //Don't process further if frame dropped.
+        if(!buffer_recd) continue;
+
+        //Process the block here.
+        converted = Process_Frame(&evtFrameRecv, &evtFrameConvert);
+
+        //Determine frame to use for AVI save. Process_Frame converts or not depending on pixel format.
+        if (converted)
+            evtFrameForAVI = &evtFrameConvert;
+        else
+            evtFrameForAVI = &evtFrameRecv;
+
+        //Wait for threads turn to append. Helps keep frames in order for append.
+        while(frame_count_this != G.appended_frame_count + 1);
+
+        //Every AVI_FRAME_COUNT frames open AVI file again.
+        if (((frame_count_this-1)%AVI_FRAME_COUNT) == 0) {
+            if (!G.avi_open) {
+                EVT_AVIOpen(&G.aviFile);
+                EVT_AVIAppend(&G.aviFile, evtFrameForAVI);
+                printf("o.");
+                G.avi_open = true;
+            }
+        } else if(((frame_count_this-1)%AVI_FRAME_COUNT) == AVI_FRAME_COUNT-1) {
+            //Every AVI_FRAME_COUNT frames close AVI file again.
+            if(G.avi_open) {
+                EVT_AVIAppend(&G.aviFile, evtFrameForAVI);
+                EVT_AVIClose(&G.aviFile);
+                printf("c.");
+                G.avi_open = false;
+            }
+        } else {
+            if (G.avi_open) {
+                EVT_AVIAppend(&G.aviFile, evtFrameForAVI);
+            }
+        }
+
+        //Incrementing this counter will allow next thread to do its append.
+        G.appended_frame_count++;
+    }
+
+    printf("\nWorker Thread %d Ended...", wrk->worker_id);
+}
+
+bool MainWindow::SetupAviWorkers() {
+   int fps = QJsonValue::fromVariant(ui->fps_options->itemData(ui->fps_options->currentIndex())).toInt();
+   G.aviFile.fps       = fps;
+   G.aviFile.codec     = EVT_CODEC_NONE;
+
+   int width = 3208;
+   int height = 2200;
+   unsigned int numworkers;
+
+   // hardcode for now to get basic threading example working
+   G.aviFile.width     = 3208;
+   G.aviFile.height    = 2200;
+
+   if (pthread_mutex_init(&G.wrk_mtx, NULL) != 0) {
+       printf("\n mutex init failed\n");
+       return false;
+   }
+
+   int dwNumberOfProcessors = sysconf( _SC_NPROCESSORS_ONLN );
+
+   //Not done before starting threads.
+   G.done = false;
+   G.frame_count = 0;
+   G.appended_frame_count = 0;
+   // need to figure out how to interrupt worker threads from Qt main GUI
+   G.frame_to_recv = MAX_FRAMES;
+   G.id_prev = 0;
+   G.dropped_frames = 0;
+   G.width = width;
+   G.height = height;
+   G.pixel_type = evtFrame[0].pixel_type;
+   G.avi_open = false;
+
+   //Start as many worker threads as we have processors.
+   if(dwNumberOfProcessors < MAX_WORKERS)
+       numworkers = dwNumberOfProcessors;
+   else
+       numworkers = MAX_WORKERS;
+
+   for(unsigned int i=0; i < numworkers; i++) {
+       G.worker[i].worker_id = i;
+       G.p_camera = &camera;
+       pthread_create(&G.worker[i].thread_id, NULL, (void* (*)(void*))&AVIWorkThread, (void*)(&G.worker[i]));
+   }
+   return true;
+
 }
 
 bool MainWindow::CheckEmergentCamera(GigEVisionDeviceInfo* deviceInfo) {
@@ -92,7 +423,7 @@ void MainWindow::ConfigureEmergentCameraDefaults(CEmergentCamera* camera) {
     //Order is important as param max/mins get updated.
     EVT_CameraGetEnumParamRange(camera, "PixelFormat", enumBuffer, enumBufferSize, &enumBufferSizeReturn);
     char* enumMember = strtok_s(enumBuffer, ",", &next_token);
-    EVT_CameraSetEnumParam(camera,      "PixelFormat", enumMember);
+  //  EVT_CameraSetEnumParam(camera,      "PixelFormat", enumMember);
 
     EVT_CameraSetUInt32Param(camera,    "FrameRate", 30);
 
@@ -125,7 +456,7 @@ void MainWindow::ConfigureEmergentCameraDefaults(CEmergentCamera* camera) {
     EVT_CameraSetBoolParam(camera,      "AutoGain", false);
 }
 
-void MainWindow::SetupPreview() {
+void MainWindow::SetupCamera() {
     printf("Starting Preview:");
     struct GigEVisionDeviceInfo deviceInfo[1];
 
@@ -150,7 +481,7 @@ void MainWindow::SetupPreview() {
         EVT_CameraGetUInt32ParamMax(&camera, "Height", &height_max);
         EVT_CameraGetUInt32ParamMax(&camera, "Width" , &width_max);
         printf("Resolution: \t\t%d x %d\n", width_max, height_max);
-        EVT_CameraSetEnumParam(&camera,      "PixelFormat", "YUV422Packed");
+        EVT_CameraSetEnumParam(&camera,      "PixelFormat", "Mono8");
         EVT_CameraGetUInt32ParamMax(&camera, "FrameRate", &frame_rate_max);
 
         frame_rate = frame_rate_max;
@@ -168,7 +499,7 @@ void MainWindow::SetupPreview() {
         for (int frame_count=0;frame_count<30;frame_count++) {
             evtFrame[frame_count].size_x = width_max;
             evtFrame[frame_count].size_y = height_max;
-            evtFrame[frame_count].pixel_type = GVSP_PIX_YUV422_PACKED;
+            evtFrame[frame_count].pixel_type = GVSP_PIX_MONO8;
             err = EVT_AllocateFrameBuffer(&camera, &evtFrame[frame_count], EVT_FRAME_BUFFER_ZERO_COPY);
             if(err) printf("EVT_AllocateFrameBuffer Error!\n");
             err = EVT_CameraQueueFrame(&camera, &evtFrame[frame_count]);
@@ -190,19 +521,26 @@ void MainWindow::DisplayPreview() {
     if (ReturnVal) {
         printf("EVT_CameraQueueFrame Error!\n");
     }
-    cv::Mat frame(evtFrameRecv.size_x, evtFrameRecv.size_y, CV_8UC3, evtFrameRecv.imagePtr);
-    cv::resize(frame, frame, Size(561, 316), 0, 0, INTER_LINEAR);
-    cv::cvtColor(frame, frame, COLOR_BGR2RGB);
-    QImage imdisplay((uchar*)frame.data, frame.cols, frame.rows, frame.step, QImage::Format_RGB888);
-    ui->VideoPreview->setPixmap(QPixmap::fromImage(imdisplay));
+   // EVT_FrameConvert(&evtFrameRecv, &evtFrameConvert, EVT_CONVERT_8BIT, EVT_COLOR_CONVERT_NONE);
+    //EVT_FrameSave(&evtFrameRecv, "pre_opencv_esdk.tif", EVT_FILETYPE_TIF, EVT_ALIGN_NONE);
 
-    ReturnVal = EVT_CameraQueueFrame(&camera, &evtFrameRecv); //Re-queue.
+     cv::Mat frame(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC1);
+     cv::resize(frame, frame, Size(561, 316), 0, 0, INTER_LINEAR);
+
+     QImage imdisplay((uchar*)frame.data, frame.cols, frame.rows, frame.step, QImage::Format_Indexed8);
+     ui->VideoPreview->setPixmap(QPixmap::fromImage(imdisplay));
+
+     ReturnVal = EVT_CameraQueueFrame(&camera, &evtFrameRecv); //Re-queue.
 }
 
 void MainWindow::PipeCameraFrame() {
-     cv::Mat frame;
-     cap >> frame;
-     writer.write(frame);
+    int ReturnVal = 0;
+    ReturnVal = EVT_CameraGetFrame(&camera, &evtFrameRecv, EVT_INFINITE);
+    if (ReturnVal) {
+        printf("EVT_CameraQueueFrame Error!\n");
+        return;
+    }
+     ReturnVal = EVT_CameraQueueFrame(&camera, &evtFrameRecv); //Re-queue.
 }
 
 void MainWindow::on_loadOptions_clicked()
@@ -239,11 +577,7 @@ void MainWindow::on_loadOptions_clicked()
             ui->h264_checkbox->setChecked(true);
         }
     }
-    QJsonValue sourceValue = parent.value(QString("csi_source"));
-    if (!sourceValue.isNull()) {
-        int index = ui->cameraSourceOptions->findData(sourceValue);
-        ui->cameraSourceOptions->setCurrentIndex(index);
-    }
+
 }
 
 void MainWindow::on_saveLocation_clicked()
@@ -269,7 +603,6 @@ void MainWindow::on_saveOptions_clicked()
     }
 
     QJsonObject cameraOptions;
-    cameraOptions["fps"] = QJsonValue::fromVariant(ui->fps_options->itemData(ui->fps_options->currentIndex()));
     cameraOptions["resolution"] = QJsonValue::fromVariant(ui->resolutionOptions->itemData(ui->resolutionOptions->currentIndex()));
     cameraOptions["save_location"] = QJsonValue::fromVariant(ui->saveFilename->text());
     QString compression("none");
@@ -277,8 +610,6 @@ void MainWindow::on_saveOptions_clicked()
         compression = "h264";
     }
     cameraOptions["compression"] = compression;
-    cameraOptions["csi_source"] = QJsonValue::fromVariant(ui->cameraSourceOptions->itemData(ui->cameraSourceOptions->currentIndex()));
-
     QJsonDocument optionsDocument(cameraOptions);
     file.write(optionsDocument.toJson());
 }
@@ -291,33 +622,6 @@ void MainWindow::on_recordButton_clicked()
         // switch icon for button to stop
         ui->recordButton->setIcon(QIcon::fromTheme("media-playback-stop"));
 
-        // Create OpenCV capture object, ensure it works.
-        settings->setLatestValues(ui);
-        QString gstreamer = GenerateGStreamerPipeline();
-        std::cout << gstreamer.toUtf8().constData();
-        cap = cv::VideoCapture(gstreamer.toUtf8().constData(), cv::CAP_GSTREAMER);
-        if (!cap.isOpened()) {
-            std::cout << "Connection failed";
-            return;
-        }
-
-        // pipe video capture through writer to file
-        QString gstWriter;
-        if (settings->getCompression()=="h264") {
-            gstWriter = "appsrc !  videoconvert ! omxh264enc ! qtmux ! filesink location=" + settings->getLocation() + " ";
-        } else {
-            gstWriter = "appsrc !  videoconvert ! qtmux ! filesink location=" + settings->getLocation() + " ";
-        }
-        std::cout << gstWriter.toUtf8().constData();
-        int fourcc;
-        if (settings->getCompression()=="h264") {
-            fourcc = cv::VideoWriter::fourcc('H','2','6','4');
-        } else {
-            fourcc = CAP_PROP_FOURCC;
-        }
-        writer = cv::VideoWriter(gstWriter.toUtf8().constData(), cap.get(fourcc),
-                                 settings->getFPS().toFloat(), cv::Size(settings->getWidth().toInt(), settings->getHeight().toInt()));
-
         timer = new QTimer (this);
         connect(timer, SIGNAL(timeout()), this, SLOT(PipeCameraFrame()));
         timer->start((int)1000.0/settings->getFPS().toDouble());
@@ -328,12 +632,14 @@ void MainWindow::on_recordButton_clicked()
         ui->recordButton->setIcon(QIcon::fromTheme("media-record"));
 
         timer->stop();
-        if (cap.isOpened()) {
-            cap.release();
+        EVT_CameraExecuteCommand(&camera, "AcquisitionStop");
+
+        for(int frame_count=0;frame_count<30;frame_count++) {
+                EVT_ReleaseFrameBuffer(&camera, &evtFrame[frame_count]);
         }
-        if (writer.isOpened()) {
-            writer.release();
-        }
+
+        EVT_CameraCloseStream(&camera);
+        EVT_CameraClose(&camera);
     }
 }
 
@@ -344,22 +650,11 @@ void MainWindow::on_previewButton_clicked()
         ui->previewButton->setIcon(QIcon::fromTheme("application-exit"));
         preview = true;
         settings->setLatestValues(ui);
+        SetupCamera();
 
-       // QString pipeline = "nvcamerasrc flicker=0 auto-exposure=1 exposure-time=0.0833 color-effect=1 wbmode=0 ! video/x-raw(memory:NVMM), width=(int)" + settings->getWidth() +
-        //        ", height=(int)" + settings->getHeight() + ", format=(string)I420, framerate=(fraction)" + settings->getFPS() +
-        //        "/1 ! nvvidconv flip-method=0 ! video/x-raw, format=(string)BGRx ! videoconvert ! video/x-raw, format=(string)BGR ! appsink";
-        //QString pipeline = "filesrc location=/home/schauder/Downloads/1.mp4 ! decodebin name=dec ! videoconvert ! video/x-raw, format=BGR ! appsink";
-
-        //cap =  cv::VideoCapture(pipeline.toUtf8().constData(), cv::CAP_GSTREAMER);
-       // if (!cap.isOpened()) {
-       //     std::cout << "Connection failed";
-        //    return;
-       // }
-      //  timer = new QTimer (this);
-         //QTimer::singleShot(10000, this, SLOT(DisplayPreview()));
-        //connect(timer, SIGNAL(timeout()), this, SLOT(DisplayPreview()));
-        //timer->start(30);
-        DisplayPreview();
+        timer = new QTimer (this);
+        connect(timer, SIGNAL(timeout()), this, SLOT(DisplayPreview()));
+        timer->start(30);
     } else {
         preview = false;
 
@@ -374,12 +669,6 @@ void MainWindow::on_previewButton_clicked()
 
         EVT_CameraCloseStream(&camera);
         EVT_CameraClose(&camera);
-        /*if (cap.isOpened()) {
-            cap.release();
-        }
-        if (writer.isOpened()) {
-            writer.release();
-        }*/
     }
 
 }
