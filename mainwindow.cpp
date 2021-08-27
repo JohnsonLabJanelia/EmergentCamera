@@ -134,7 +134,7 @@ void MainWindow::SetupCamera() {
         EVT_CameraGetUInt32ParamMax(&camera, "Width" , &width_max);
         printf("Resolution: \t\t%d x %d\n", width_max, height_max);
         EVT_CameraSetEnumParam(&camera,      "PixelFormat", "RGB8Packed");
-       // EVT_CameraSetEnumParam(&camera,      "PixelFormat", "YUV444Packed");
+       // EVT_CameraSetEnumParam(&camera,      "PixelFormat", "YUV422Packed");
         EVT_CameraGetUInt32ParamMax(&camera, "FrameRate", &frame_rate_max);
 
         frame_rate = frame_rate_max;
@@ -153,7 +153,7 @@ void MainWindow::SetupCamera() {
             evtFrame[frame_count].size_x = width_max;
             evtFrame[frame_count].size_y = height_max;
             evtFrame[frame_count].pixel_type = GVSP_PIX_RGB8;
-           // evtFrame[frame_count].pixel_type = GVSP_PIX_YUV444_PACKED;
+           // evtFrame[frame_count].pixel_type = GVSP_PIX_YUV422_PACKED;
             err = EVT_AllocateFrameBuffer(&camera, &evtFrame[frame_count], EVT_FRAME_BUFFER_ZERO_COPY);
             if(err) printf("EVT_AllocateFrameBuffer Error!\n");
             err = EVT_CameraQueueFrame(&camera, &evtFrame[frame_count]);
@@ -240,11 +240,13 @@ void MainWindow::PipeCameraFrame() {
     cv::Mat frame(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC3, evtFrameRecv.imagePtr);
 
     timeval startTime, endTime;
-    gettimeofday(&startTime, NULL);
+
+    // TO DO: Set this up so it will only log for debug mode
+    //gettimeofday(&startTime, NULL);
     writer.write(frame);
-    gettimeofday(&endTime, NULL);
-       float time_diff = (endTime.tv_sec  - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec)/1000000.0;
-       cout << "Time of Conversion: " << time_diff << endl;
+    //gettimeofday(&endTime, NULL);
+    //   float time_diff = (endTime.tv_sec  - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec)/1000000.0;
+    //   cout << "Time of Conversion: " << time_diff << endl;
      ReturnVal = EVT_CameraQueueFrame(&camera, &evtFrameRecv); //Re-queue.
 }
 
@@ -279,7 +281,7 @@ void MainWindow::on_loadOptions_clicked()
     QJsonValue compressionValue = parent.value(QString("compression"));
     if (!compressionValue.isNull()) {
         if (compressionValue.toString() == "h264") {
-            ui->h264_checkbox->setChecked(true);
+            ui->h265_checkbox->setChecked(true);
         }
     }
 
@@ -311,8 +313,8 @@ void MainWindow::on_saveOptions_clicked()
     cameraOptions["resolution"] = QJsonValue::fromVariant(ui->resolutionOptions->itemData(ui->resolutionOptions->currentIndex()));
     cameraOptions["save_location"] = QJsonValue::fromVariant(ui->saveFilename->text());
     QString compression("none");
-    if (ui->h264_checkbox->isChecked()) {
-        compression = "h264";
+    if (ui->h265_checkbox->isChecked()) {
+        compression = true;
     }
     cameraOptions["compression"] = compression;
     QJsonDocument optionsDocument(cameraOptions);
@@ -337,7 +339,15 @@ void MainWindow::on_recordButton_clicked()
         ui->recordButton->setIcon(QIcon::fromTheme("media-playback-stop"));
 
         // switch to nvh265enc for slower but better compression
-        writer.open("appsrc ! videoconvert n-threads=8 ! nvh265enc  ! filesink location=roughtest.avi",CAP_GSTREAMER,0,136, Size(3208,2200));
+        QString gstream_options = "appsrc ! videoconvert n-threads=8 ! ";
+        if (ui->h265_checkbox->isChecked()) {
+            gstream_options.append ("nvh264enc");
+        } else {
+            gstream_options.append ("nvh265enc");
+        }
+        gstream_options.append(" ! filesink location=");
+        gstream_options += (ui->saveFilename->text());
+        writer.open(gstream_options.toUtf8().constData(),CAP_GSTREAMER,0,136, Size(3208,2200));
 
         cout << writer.isOpened() << endl;
        // if (writer.isOpened()) {
