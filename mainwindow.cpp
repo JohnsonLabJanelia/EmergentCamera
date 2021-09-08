@@ -243,18 +243,19 @@ void MainWindow::PipeCameraFrame() {
         printf("EVT_CameraQueueFrame Error!\n");
         return;
     }
-    //EVT_FrameConvert(&evtFrameRecv, &evtFrameConvert, EVT_CONVERT_NONE, EVT_COLOR_CONVERT_TO_BGR);
-    cv::Mat frame(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC3, evtFrameRecv.imagePtr);
-
-    timeval startTime, endTime;
 
     // TO DO: Set this up so it will only log for debug mode
-    //gettimeofday(&startTime, NULL);
+    timeval startTime, endTime;
+    gettimeofday(&startTime, NULL);
+    cv::Mat frame;
+    cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC2, evtFrameRecv.imagePtr);
+    cv::cvtColor(frameConvert,frame,COLOR_YUV2BGR_Y422 );
+
     writer.write(frame);
-    //gettimeofday(&endTime, NULL);
-    //   float time_diff = (endTime.tv_sec  - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec)/1000000.0;
-    //   cout << "Time of Conversion: " << time_diff << endl;
-     ReturnVal = EVT_CameraQueueFrame(&camera, &evtFrameRecv); //Re-queue.
+    gettimeofday(&endTime, NULL);
+    float time_diff = (endTime.tv_sec  - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec)/1000000.0;
+    cout << "Time of Conversion: " << time_diff << endl;
+    ReturnVal = EVT_CameraQueueFrame(&camera, &evtFrameRecv); //Re-queue.
 }
 
 void MainWindow::on_loadOptions_clicked()
@@ -347,14 +348,20 @@ void MainWindow::on_recordButton_clicked()
 
         // switch to nvh265enc for slower but better compression
         QString gstream_options = "appsrc ! videoconvert n-threads=8 ! ";
-        if (ui->h265_checkbox->isChecked()) {
+        if (!ui->h265_checkbox->isChecked()) {
             gstream_options.append ("nvh264enc");
         } else {
             gstream_options.append ("nvh265enc");
         }
         gstream_options.append(" ! filesink location=");
-        gstream_options += (ui->saveFilename->text());
-        writer.open(gstream_options.toUtf8().constData(),CAP_GSTREAMER,0,136, Size(3208,2200));
+        if (ui->saveFilename->text().isNull()) {
+            gstream_options += "output.avi";
+        } else {
+          gstream_options += (ui->saveFilename->text());
+        }
+        cout << gstream_options.toUtf8().constData() << endl;
+
+        writer.open(gstream_options.toUtf8().constData(),CAP_GSTREAMER,0,192, Size(3208,2200));
 
         cout << writer.isOpened() << endl;
        // if (writer.isOpened()) {
@@ -364,7 +371,7 @@ void MainWindow::on_recordButton_clicked()
 
             timer = new QTimer (this);
             connect(timer, SIGNAL(timeout()), this, SLOT(PipeCameraFrame()));
-            timer->start(7);
+            timer->start(5);
        // }
     } else {
         recording = false;
