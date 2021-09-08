@@ -22,7 +22,7 @@
 #include <gigevisiondeviceinfo.h>
 #include <EmergentCamera.h>
 #include <unistd.h>
-#include <sys/time.h>6383
+#include <sys/time.h>
 
 using namespace cv;
 using namespace Emergent;
@@ -133,8 +133,8 @@ void MainWindow::SetupCamera() {
         EVT_CameraGetUInt32ParamMax(&camera, "Height", &height_max);
         EVT_CameraGetUInt32ParamMax(&camera, "Width" , &width_max);
         printf("Resolution: \t\t%d x %d\n", width_max, height_max);
-        EVT_CameraSetEnumParam(&camera,      "PixelFormat", "RGB8Packed");
-       // EVT_CameraSetEnumParam(&camera,      "PixelFormat", "YUV422Packed");
+        //EVT_CameraSetEnumParam(&camera,      "PixelFormat", "RGB8Packed");
+        EVT_CameraSetEnumParam(&camera,      "PixelFormat", "YUV422Packed");
         EVT_CameraGetUInt32ParamMax(&camera, "FrameRate", &frame_rate_max);
 
         frame_rate = frame_rate_max;
@@ -152,13 +152,20 @@ void MainWindow::SetupCamera() {
         for (int frame_count=0;frame_count<30;frame_count++) {
             evtFrame[frame_count].size_x = width_max;
             evtFrame[frame_count].size_y = height_max;
-            evtFrame[frame_count].pixel_type = GVSP_PIX_RGB8;
-           // evtFrame[frame_count].pixel_type = GVSP_PIX_YUV422_PACKED;
+            //evtFrame[frame_count].pixel_type = GVSP_PIX_RGB8;
+           evtFrame[frame_count].pixel_type = GVSP_PIX_YUV422_PACKED;
             err = EVT_AllocateFrameBuffer(&camera, &evtFrame[frame_count], EVT_FRAME_BUFFER_ZERO_COPY);
             if(err) printf("EVT_AllocateFrameBuffer Error!\n");
             err = EVT_CameraQueueFrame(&camera, &evtFrame[frame_count]);
             if(err) printf("EVT_CameraQueueFrame Error!\n");
         }
+
+        evtFrameConvert.size_x = width_max;
+        evtFrameConvert.size_y = height_max;
+        evtFrameConvert.pixel_type = GVSP_PIX_RGB8;
+        evtFrameConvert.convertColor = EVT_COLOR_CONVERT_BILINEAR;
+        evtFrameConvert.convertBitDepth = EVT_CONVERT_8BIT;
+        EVT_AllocateFrameBuffer(&camera, &evtFrameConvert, EVT_FRAME_BUFFER_DEFAULT);
 
         //Tell camera to start streaming
         ReturnVal = EVT_CameraExecuteCommand(&camera, "AcquisitionStart");
@@ -177,7 +184,6 @@ void MainWindow::SetupCamera() {
 void MainWindow::DisplayPreview() {
 
     timeval startTime, endTime;
-    gettimeofday(&startTime, NULL);
     int ReturnVal = 0;
     previewCounter++;
     ReturnVal = EVT_CameraGetFrame(&camera, &evtFrameRecv, EVT_INFINITE);
@@ -186,9 +192,10 @@ void MainWindow::DisplayPreview() {
     }
         previewCounter = 0;
 
-        // uncomment if using a format that needs color space conversion
-        //EVT_FrameConvert(&evtFrameRecv, &evtFrameConvert, EVT_CONVERT_NONE, EVT_COLOR_CONVERT_TO_BGR);
-        cv::Mat frame(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC3, evtFrameRecv.imagePtr);
+        cv::Mat frame;
+        cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC2, evtFrameRecv.imagePtr);
+        cv::cvtColor(frameConvert,frame,COLOR_YUV2BGR_Y422 );
+
         cv::resize(frame, frame, Size(561, 316), 0, 0, INTER_LINEAR);
         currFrame = frame;
 
