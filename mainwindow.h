@@ -80,6 +80,7 @@ private:
     Ptr<BackgroundSubtractor> backSub;
     CEmergentFrame evtFrame[30], evtFrameRecv, evtFrameConvert;
     cv::Mat currFrame, frameGrabFrame;
+    QString format;
     bool recording = false;
     bool preview = false;
     int previewCounter = 0;

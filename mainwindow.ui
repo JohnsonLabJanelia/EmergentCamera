@@ -151,44 +151,31 @@
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
-      <x>620</x>
+      <x>610</x>
       <y>30</y>
       <width>353</width>
-      <height>231</height>
+      <height>101</height>
      </rect>
     </property>
     <layout class="QFormLayout" name="formLayout">
      <item row="0" column="0">
-      <widget class="QLabel" name="resolutionLabel">
+      <widget class="QLabel" name="captureFormatLabel">
        <property name="text">
-        <string>Video Resolution:</string>
+        <string>Capture Format:</string>
        </property>
       </widget>
      </item>
      <item row="0" column="1">
-      <widget class="QComboBox" name="resolutionOptions"/>
+      <widget class="QComboBox" name="captureFormatOptions"/>
      </item>
      <item row="1" column="0">
-      <widget class="QLabel" name="fpsLabel">
-       <property name="text">
-        <string>FPS:</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="1" column="1">
-      <widget class="QComboBox" name="fps_options"/>
-     </item>
-     <item row="5" column="0">
       <widget class="QPushButton" name="saveLocation">
        <property name="text">
         <string>Save Location</string>
        </property>
       </widget>
      </item>
-     <item row="5" column="1">
+     <item row="4" column="1">
       <widget class="QLabel" name="saveFilename">
        <property name="text">
         <string/>
@@ -197,27 +184,6 @@
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
       </widget>
-     </item>
-     <item row="6" column="0">
-      <widget class="QLabel" name="compressionLabel">
-       <property name="text">
-        <string>H.265 Compressed</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-       </property>
-      </widget>
-     </item>
-     <item row="6" column="1">
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <item>
-        <widget class="QCheckBox" name="h265_checkbox">
-         <property name="text">
-          <string/>
-         </property>
-        </widget>
-       </item>
-      </layout>
      </item>
     </layout>
    </widget>
@@ -301,6 +267,58 @@
     <property name="text">
      <string>Grab Background</string>
     </property>
+   </widget>
+   <widget class="QGroupBox" name="groupBox">
+    <property name="geometry">
+     <rect>
+      <x>610</x>
+      <y>130</y>
+      <width>201</width>
+      <height>101</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Compression Type</string>
+    </property>
+    <widget class="QRadioButton" name="compression_h265">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>70</y>
+       <width>157</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>H.265 Compression</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="compression_h264">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>50</y>
+       <width>157</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>H.264 Compression</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="compression_raw">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>30</y>
+       <width>137</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>No Compression</string>
+     </property>
+    </widget>
    </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">

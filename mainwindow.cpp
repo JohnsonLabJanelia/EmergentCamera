@@ -36,10 +36,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->loadOptions->setToolTip(("Load Movie/Camera Options From JSON File"));
     ui->saveOptions->setToolTip(("Save Movie/Camera Options To JSON File"));
-
-    ui->resolutionOptions->addItem("3208x2200","3208x2200");
-    ui->fps_options->addItem("200","200");
-    ui->fps_options->addItem("100","100");
+    ui->captureFormatOptions->addItem("Bayer RGB","BayerRGB");
+    ui->captureFormatOptions->addItem("YUV 422 Packed","YUV422Packed");
+    ui->captureFormatOptions->addItem("RGB 8","RGB8");
+    ui->saveFilename->setText("output.avi");
+    ui->compression_h264->setChecked(true);
+    ui->recordButton->setText("Record");
 }
 
 MainWindow::~MainWindow()
@@ -133,8 +135,14 @@ void MainWindow::SetupCamera() {
         EVT_CameraGetUInt32ParamMax(&camera, "Height", &height_max);
         EVT_CameraGetUInt32ParamMax(&camera, "Width" , &width_max);
         printf("Resolution: \t\t%d x %d\n", width_max, height_max);
-        //EVT_CameraSetEnumParam(&camera,      "PixelFormat", "RGB8Packed");
-        EVT_CameraSetEnumParam(&camera,      "PixelFormat", "YUV422Packed");
+        if (format == "RGB8") {
+            EVT_CameraSetEnumParam(&camera,      "PixelFormat", "RGB8Packed");
+        } else if (format == "BayerRGB") {
+            EVT_CameraSetEnumParam(&camera,      "PixelFormat", "BayerRG8");
+        } else {
+            EVT_CameraSetEnumParam(&camera,      "PixelFormat", "YUV422Packed");
+        }
+
         EVT_CameraGetUInt32ParamMax(&camera, "FrameRate", &frame_rate_max);
 
         frame_rate = frame_rate_max;
@@ -152,8 +160,13 @@ void MainWindow::SetupCamera() {
         for (int frame_count=0;frame_count<30;frame_count++) {
             evtFrame[frame_count].size_x = width_max;
             evtFrame[frame_count].size_y = height_max;
-            //evtFrame[frame_count].pixel_type = GVSP_PIX_RGB8;
-           evtFrame[frame_count].pixel_type = GVSP_PIX_YUV422_PACKED;
+            if (format == "RGB8") {
+                evtFrame[frame_count].pixel_type = GVSP_PIX_RGB8;
+            } else if (format == "BayerRGB") {
+                evtFrame[frame_count].pixel_type = GVSP_PIX_BAYRG8;
+            } else {
+                evtFrame[frame_count].pixel_type = GVSP_PIX_YUV422_PACKED;
+            }
             err = EVT_AllocateFrameBuffer(&camera, &evtFrame[frame_count], EVT_FRAME_BUFFER_ZERO_COPY);
             if(err) printf("EVT_AllocateFrameBuffer Error!\n");
             err = EVT_CameraQueueFrame(&camera, &evtFrame[frame_count]);
@@ -193,9 +206,16 @@ void MainWindow::DisplayPreview() {
         previewCounter = 0;
 
         cv::Mat frame;
-        cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC2, evtFrameRecv.imagePtr);
-        cv::cvtColor(frameConvert,frame,COLOR_YUV2BGR_Y422 );
+       if (format == "RGB8") {
+           frame = cv::Mat(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC3, evtFrameRecv.imagePtr);
 
+        } else if (format == "BayerRGB") {
+           cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC1, evtFrameRecv.imagePtr);
+           cv::cvtColor(frameConvert,frame,COLOR_BayerRG2RGB );
+        } else {
+           cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC2, evtFrameRecv.imagePtr);
+           cv::cvtColor(frameConvert,frame,COLOR_YUV2BGR_Y422 );
+        }
         cv::resize(frame, frame, Size(561, 316), 0, 0, INTER_LINEAR);
         currFrame = frame;
 
@@ -248,9 +268,15 @@ void MainWindow::PipeCameraFrame() {
     timeval startTime, endTime;
     gettimeofday(&startTime, NULL);
     cv::Mat frame;
-    cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC2, evtFrameRecv.imagePtr);
-    cv::cvtColor(frameConvert,frame,COLOR_YUV2BGR_Y422 );
-
+    if (format=="RGB8") {
+        frame = cv::Mat(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC3, evtFrameRecv.imagePtr);
+    } else if (format == "BayerRGB") {
+        cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC1, evtFrameRecv.imagePtr);
+        cv::cvtColor(frameConvert,frame,COLOR_BayerRG2RGB );
+    } else {
+        cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC2, evtFrameRecv.imagePtr);
+        cv::cvtColor(frameConvert,frame,COLOR_YUV2BGR_Y422 );
+    }
     writer.write(frame);
     gettimeofday(&endTime, NULL);
     float time_diff = (endTime.tv_sec  - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec)/1000000.0;
@@ -272,25 +298,14 @@ void MainWindow::on_loadOptions_clicked()
     QJsonObject parent = d.object();
     // populate options based off JSON file
 
-    QJsonValue fpsValue = parent.value(QString("fps"));
-    if (!fpsValue.isNull()) {
-        int index = ui->fps_options->findData(fpsValue);
-        ui->fps_options->setCurrentIndex(index);
-    }
-    QJsonValue resolutionValue = parent.value(QString("resolution"));
-    if (!resolutionValue.isNull()) {
-        int index = ui->resolutionOptions->findData(resolutionValue);
-        ui->resolutionOptions->setCurrentIndex(index);
+    QJsonValue captureFormatValue = parent.value(QString("format"));
+    if (!captureFormatValue.isNull()) {
+        int index = ui->captureFormatOptions->findData(captureFormatValue);
+        ui->captureFormatOptions->setCurrentIndex(index);
     }
     QJsonValue saveLocationValue = parent.value(QString("save_location"));
     if (!saveLocationValue.isNull()) {
         ui->saveFilename->setText(saveLocationValue.toString());
-    }
-    QJsonValue compressionValue = parent.value(QString("compression"));
-    if (!compressionValue.isNull()) {
-        if (compressionValue.toString() == "h264") {
-            ui->h265_checkbox->setChecked(true);
-        }
     }
 
 }
@@ -318,11 +333,11 @@ void MainWindow::on_saveOptions_clicked()
     }
 
     QJsonObject cameraOptions;
-    cameraOptions["resolution"] = QJsonValue::fromVariant(ui->resolutionOptions->itemData(ui->resolutionOptions->currentIndex()));
+    cameraOptions["format"] = QJsonValue::fromVariant(ui->captureFormatOptions->itemData(ui->captureFormatOptions->currentIndex()));
     cameraOptions["save_location"] = QJsonValue::fromVariant(ui->saveFilename->text());
     QString compression("none");
-    if (ui->h265_checkbox->isChecked()) {
-        compression = true;
+    if (ui->compression_raw->isChecked()) {
+        compression = false;
     }
     cameraOptions["compression"] = compression;
     QJsonDocument optionsDocument(cameraOptions);
@@ -345,13 +360,14 @@ void MainWindow::on_recordButton_clicked()
         recording = true;
         // switch icon for button to stop
         ui->recordButton->setIcon(QIcon::fromTheme("media-playback-stop"));
+        ui->recordButton->setText("Stop Record");
 
         // switch to nvh265enc for slower but better compression
-        QString gstream_options = "appsrc ! videoconvert n-threads=8 ! ";
-        if (!ui->h265_checkbox->isChecked()) {
-            gstream_options.append ("nvh264enc");
-        } else {
-            gstream_options.append ("nvh265enc");
+        QString gstream_options = "appsrc ! videoconvert n-threads=8";
+        if (ui->compression_h264->isChecked()) {
+            gstream_options.append (" ! nvh264enc");
+        } else if (ui->compression_h265->isChecked()){
+            gstream_options.append (" ! nvh265enc");
         }
         gstream_options.append(" ! filesink location=");
         if (ui->saveFilename->text().isNull()) {
@@ -361,12 +377,21 @@ void MainWindow::on_recordButton_clicked()
         }
         cout << gstream_options.toUtf8().constData() << endl;
 
-        writer.open(gstream_options.toUtf8().constData(),CAP_GSTREAMER,0,192, Size(3208,2200));
+        format = QJsonValue::fromVariant(ui->captureFormatOptions->itemData(ui->captureFormatOptions->currentIndex())).toString();
+        cout << "FORMAT SELECTED: " << format.toStdString() << endl;
+        int fps = 192;
+        if (format=="RGB8") {
+           fps = 136;
+        }
+        writer.open(gstream_options.toUtf8().constData(),CAP_GSTREAMER,0,fps, Size(3208,2200));
 
         cout << writer.isOpened() << endl;
        // if (writer.isOpened()) {
          //   cout << "Writer not initializWed properly";
       //  } else {
+
+            // get format so we can set up the camera properly
+
             SetupCamera();
 
             timer = new QTimer (this);
@@ -378,6 +403,7 @@ void MainWindow::on_recordButton_clicked()
 
         // switch icon for button to record
         ui->recordButton->setIcon(QIcon::fromTheme("media-record"));
+        ui->recordButton->setText("Record");
 
        // if (writer.isOpened()) {
             timer->stop();
@@ -397,8 +423,11 @@ void MainWindow::on_recordButton_clicked()
 void MainWindow::on_previewButton_clicked()
 {
     if (!preview) {
+        format = QJsonValue::fromVariant(ui->captureFormatOptions->itemData(ui->captureFormatOptions->currentIndex())).toString();
+        cout << "FORMAT SELECTED: " << format.toStdString() << endl;
 
         ui->previewButton->setIcon(QIcon::fromTheme("application-exit"));
+        ui->previewButton->setText("Stop Preview");
         preview = true;
         settings->setLatestValues(ui);
         SetupCamera();
@@ -410,6 +439,7 @@ void MainWindow::on_previewButton_clicked()
         preview = false;
 
         ui->previewButton->setIcon(QIcon::fromTheme("camera_photo"));
+        ui->previewButton->setText("Preview");
         timer->stop();
 
         EVT_CameraExecuteCommand(&camera, "AcquisitionStop");
