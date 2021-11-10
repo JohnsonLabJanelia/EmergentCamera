@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
+#include "camera.h"
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp>
 #include <opencv2/imgproc.hpp>
@@ -13,6 +14,8 @@
 #include <QJsonValue>
 #include <QtDebug>
 #include <QMessageBox>
+#include <QDateTime>
+#include <QDir>
 #include <QSize>
 #include <QProcess>
 #include <EmergentCameraAPIs.h>
@@ -39,9 +42,22 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->captureFormatOptions->addItem("Bayer RGB","BayerRGB");
     ui->captureFormatOptions->addItem("YUV 422 Packed","YUV422Packed");
     ui->captureFormatOptions->addItem("RGB 8","RGB8");
-    ui->saveFilename->setText("output.avi");
+    ui->saveFilename->setText("/home/rob/Trials");
     ui->compression_h264->setChecked(true);
     ui->recordButton->setText("Record");
+
+    previewWindow[0] = ui->Camera1_Preview;
+    previewWindow[1] = ui->Camera2_Preview;
+    previewWindow[2] = ui->Camera3_Preview;
+    previewWindow[3] = ui->Camera4_Preview;
+    backgroundWindow[0] = ui->Background1;
+    backgroundWindow[1] = ui->Background2;
+    backgroundWindow[2] = ui->Background3;
+    backgroundWindow[3] = ui->Background4;
+    trackingWindow[0] = ui->Tracking1;
+    trackingWindow[1] = ui->Tracking2;
+    trackingWindow[2] = ui->Tracking3;
+    trackingWindow[3] = ui->Tracking4;
 }
 
 MainWindow::~MainWindow()
@@ -52,236 +68,6 @@ MainWindow::~MainWindow()
 
 void MainWindow::ParseOptionsFile() {
 
-}
-
-bool MainWindow::CheckEmergentCamera(GigEVisionDeviceInfo* deviceInfo) {
-    unsigned int listcam_buf_size = 1;
-    unsigned int count;
-    EVT_ListDevices(deviceInfo, &listcam_buf_size, &count);
-    if (count==0) {
-        printf("Enumerate Cameras: \tNo cameras found.\n");
-        return false;
-    }
-
-    char* EVT_models[] = {"HS", "HT", "HR", "HB", "LR", "LB" };
-    int EVT_models_count = sizeof(EVT_models) / sizeof(EVT_models[0]);
-    for (int i = 0; i < EVT_models_count; i++) {
-        if(strncmp(deviceInfo[0].modelName, EVT_models[i], 2) == 0) {
-            return true;
-        }
-    }
-}
-
-void MainWindow::ConfigureEmergentCameraDefaults(CEmergentCamera* camera) {
-    unsigned int width_max, height_max, param_val_max;
-    const unsigned long enumBufferSize = 1000;
-    unsigned long enumBufferSizeReturn = 0;
-    char enumBuffer[enumBufferSize];
-
-    //Order is important as param max/mins get updated.
-    EVT_CameraGetEnumParamRange(camera, "PixelFormat", enumBuffer, enumBufferSize, &enumBufferSizeReturn);
-    char* enumMember = strtok_s(enumBuffer, ",", &next_token);
-  //  EVT_CameraSetEnumParam(camera,      "PixelFormat", enumMember);
-
-
-    EVT_CameraSetUInt32Param(camera,    "OffsetX", 0);
-    EVT_CameraSetUInt32Param(camera,    "OffsetY", 0);
-
-    EVT_CameraGetUInt32ParamMax(camera, "Width", &width_max);
-    EVT_CameraSetUInt32Param(camera,    "Width", width_max);
-
-    EVT_CameraGetUInt32ParamMax(camera, "Height", &height_max);
-    EVT_CameraSetUInt32Param(camera,    "Height", height_max);
-
-    EVT_CameraSetEnumParam(camera,      "AcquisitionMode",        "Continuous");
-    EVT_CameraSetUInt32Param(camera,    "AcquisitionFrameCount",  1);
-    EVT_CameraSetEnumParam(camera,      "TriggerSelector",        "AcquisitionStart");
-    EVT_CameraSetEnumParam(camera,      "TriggerMode",            "Off");
-    EVT_CameraSetEnumParam(camera,      "TriggerSource",          "Software");
-    EVT_CameraSetEnumParam(camera,      "BufferMode",             "Off");
-    EVT_CameraSetUInt32Param(camera,    "BufferNum",              0);
-
-    EVT_CameraGetUInt32ParamMax(camera, "GevSCPSPacketSize", &param_val_max);
-    EVT_CameraSetUInt32Param(camera,    "GevSCPSPacketSize", param_val_max);
-
-    EVT_CameraSetUInt32Param(camera,    "Offset", 0);
-    EVT_CameraSetUInt32Param(camera, "Exposure", 5000);
-    EVT_CameraSetUInt32Param(camera, "Gain", 2000);
-    EVT_CameraSetEnumParam(camera, "ColorTemp", "CT_5000K");
-
-    EVT_CameraSetBoolParam(camera,      "LUTEnable", false);
-    EVT_CameraSetBoolParam(camera,      "AutoGain", false);
-}
-
-void MainWindow::SetupCamera() {
-    printf("Starting Preview:");
-    struct GigEVisionDeviceInfo deviceInfo[1];
-
-
-    int ReturnVal = 0;
-    int SUCCESS = 0;
-    EVT_ERROR err = EVT_SUCCESS;
-
-    previewCounter = 0;
-    if (CheckEmergentCamera(deviceInfo)) {
-        Emergent::EVT_CameraOpen(&camera, &deviceInfo[0]);
-
-        if (ReturnVal != SUCCESS) {
-            printf("Open Camera: \t\tError");
-            return;
-        }
-
-        ConfigureEmergentCameraDefaults(&camera);
-        EVT_CameraGetUInt32ParamMax(&camera, "Height", &height_max);
-        EVT_CameraGetUInt32ParamMax(&camera, "Width" , &width_max);
-        printf("Resolution: \t\t%d x %d\n", width_max, height_max);
-        if (format == "RGB8") {
-            EVT_CameraSetEnumParam(&camera,      "PixelFormat", "RGB8Packed");
-        } else if (format == "BayerRGB") {
-            EVT_CameraSetEnumParam(&camera,      "PixelFormat", "BayerRG8");
-        } else {
-            EVT_CameraSetEnumParam(&camera,      "PixelFormat", "YUV422Packed");
-        }
-
-        EVT_CameraGetUInt32ParamMax(&camera, "FrameRate", &frame_rate_max);
-
-        frame_rate = frame_rate_max;
-        EVT_CameraSetUInt32Param(&camera, "FrameRate", frame_rate);
-
-        printf("FrameRate Set: \t\t%d\n", frame_rate);
-
-        //Prepare host side for streaming.
-        ReturnVal = EVT_CameraOpenStream(&camera);
-        if (ReturnVal != SUCCESS) {
-            printf("Opening Stream from Camera failing: \t\tError");
-            return;
-        }
-
-        for (int frame_count=0;frame_count<30;frame_count++) {
-            evtFrame[frame_count].size_x = width_max;
-            evtFrame[frame_count].size_y = height_max;
-            if (format == "RGB8") {
-                evtFrame[frame_count].pixel_type = GVSP_PIX_RGB8;
-            } else if (format == "BayerRGB") {
-                evtFrame[frame_count].pixel_type = GVSP_PIX_BAYRG8;
-            } else {
-                evtFrame[frame_count].pixel_type = GVSP_PIX_YUV422_PACKED;
-            }
-            err = EVT_AllocateFrameBuffer(&camera, &evtFrame[frame_count], EVT_FRAME_BUFFER_ZERO_COPY);
-            if(err) printf("EVT_AllocateFrameBuffer Error!\n");
-            err = EVT_CameraQueueFrame(&camera, &evtFrame[frame_count]);
-            if(err) printf("EVT_CameraQueueFrame Error!\n");
-        }
-
-        evtFrameConvert.size_x = width_max;
-        evtFrameConvert.size_y = height_max;
-        evtFrameConvert.pixel_type = GVSP_PIX_RGB8;
-        evtFrameConvert.convertColor = EVT_COLOR_CONVERT_BILINEAR;
-        evtFrameConvert.convertBitDepth = EVT_CONVERT_8BIT;
-        EVT_AllocateFrameBuffer(&camera, &evtFrameConvert, EVT_FRAME_BUFFER_DEFAULT);
-
-        //Tell camera to start streaming
-        ReturnVal = EVT_CameraExecuteCommand(&camera, "AcquisitionStart");
-        if (ReturnVal != SUCCESS) {
-            printf("EVT_CameraExecuteCommand: Error\n");
-            return;
-        }
-
-    }
-
-    //set up tracker
-    //Ptr<Tracker> tracker = TrackerKCF::create();
-
-}
-
-void MainWindow::DisplayPreview() {
-
-    timeval startTime, endTime;
-    int ReturnVal = 0;
-    previewCounter++;
-    ReturnVal = EVT_CameraGetFrame(&camera, &evtFrameRecv, EVT_INFINITE);
-    if (ReturnVal) {
-        printf("EVT_CameraQueueFrame Error!\n");
-    }
-        previewCounter = 0;
-
-        cv::Mat frame;
-       if (format == "RGB8") {
-           frame = cv::Mat(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC3, evtFrameRecv.imagePtr);
-
-        } else if (format == "BayerRGB") {
-           cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC1, evtFrameRecv.imagePtr);
-           cv::cvtColor(frameConvert,frame,COLOR_BayerRG2RGB );
-        } else {
-           cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC2, evtFrameRecv.imagePtr);
-           cv::cvtColor(frameConvert,frame,COLOR_YUV2BGR_Y422 );
-        }
-        cv::resize(frame, frame, Size(561, 316), 0, 0, INTER_LINEAR);
-        currFrame = frame;
-
-       QImage imdisplay((uchar*)frame.data, frame.cols, frame.rows, frame.step, QImage::Format_RGB888);
-       ui->VideoPreview->setPixmap(QPixmap::fromImage(imdisplay));
-
-       if (!frameGrabFrame.empty()) {
-           cv::Mat frameGrabFrameGray, frameGray;
-           cv::Mat diffFrame, cleanFrame;
-
-           cv::cvtColor(frameGrabFrame,frameGrabFrameGray,COLOR_BGR2GRAY );
-           cv::cvtColor(frame,frameGray,COLOR_BGR2GRAY );
-
-           cv::absdiff(frameGray,frameGrabFrameGray,diffFrame);
-           cv::threshold(diffFrame, diffFrame, 25, 255, THRESH_BINARY);
-           cv::dilate(diffFrame, cleanFrame, getStructuringElement(MORPH_RECT, Size(3,3)));
-
-           // this section is a work in progress with getting contours.  Once you have contours, tracking algorithms
-           // take over pretty easily
-           /*vector<vector<Point> > contours, largestArea;
-           vector<Vec4i> hierarchy;
-           cv::findContours(cleanFrame,contours, hierarchy,RETR_EXTERNAL, CHAIN_APPROX_NONE);
-           sort (contours.begin(), contours.end(), [](const vector<Point>& c1, const vector<Point>& c2){
-              return contourArea(c1, false) < contourArea(c2, false);
-           });
-           if (contours.size()>0) {
-               cout << contours[contours.size()-1] << endl;
-            }
-            // cv::drawContours(cleanFrame,contours,-1, (0,255,0), 3);
-           //cout << contours.size() << endl;
-*/
-           cv::resize(cleanFrame, cleanFrame, Size(261, 161), 0, 0, INTER_LINEAR);
-
-           QImage imdisplay3((uchar*)cleanFrame.data, cleanFrame.cols, cleanFrame.rows, cleanFrame.step, QImage::Format_Grayscale8);
-           ui->VideoPreview_3->setPixmap(QPixmap::fromImage(imdisplay3));
-       }
-
-     ReturnVal = EVT_CameraQueueFrame(&camera, &evtFrameRecv); //Re-queue.
-}
-
-void MainWindow::PipeCameraFrame() {
-    int ReturnVal = 0;
-    ReturnVal = EVT_CameraGetFrame(&camera, &evtFrameRecv, EVT_INFINITE);
-    if (ReturnVal) {
-        printf("EVT_CameraQueueFrame Error!\n");
-        return;
-    }
-
-    // TO DO: Set this up so it will only log for debug mode
-    timeval startTime, endTime;
-    gettimeofday(&startTime, NULL);
-    cv::Mat frame;
-    if (format=="RGB8") {
-        frame = cv::Mat(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC3, evtFrameRecv.imagePtr);
-    } else if (format == "BayerRGB") {
-        cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC1, evtFrameRecv.imagePtr);
-        cv::cvtColor(frameConvert,frame,COLOR_BayerRG2RGB );
-    } else {
-        cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC2, evtFrameRecv.imagePtr);
-        cv::cvtColor(frameConvert,frame,COLOR_YUV2BGR_Y422 );
-    }
-    writer.write(frame);
-    gettimeofday(&endTime, NULL);
-    float time_diff = (endTime.tv_sec  - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec)/1000000.0;
-    cout << "Time of Conversion: " << time_diff << endl;
-    ReturnVal = EVT_CameraQueueFrame(&camera, &evtFrameRecv); //Re-queue.
 }
 
 void MainWindow::on_loadOptions_clicked()
@@ -312,9 +98,10 @@ void MainWindow::on_loadOptions_clicked()
 
 void MainWindow::on_saveLocation_clicked()
 {
-    QString filename = QFileDialog::getSaveFileName(this,
-                    tr("Choose where to Save Movie"), "",
-                    tr("All Files(*)"));
+    QString filename = QFileDialog::getExistingDirectory(this, tr("Choose Directory For Recordings"),
+                    "/home/rob/Trials",
+                    QFileDialog::ShowDirsOnly |
+                    QFileDialog::DontResolveSymlinks);
     ui->saveFilename->setText(filename);
 }
 
@@ -346,12 +133,10 @@ void MainWindow::on_saveOptions_clicked()
 
 void MainWindow::on_frameGrabButton_clicked()
 {
-    frameGrabFrame = currFrame.clone();
-    cv::Mat temp;
-    cv::resize(frameGrabFrame, temp, Size(261, 161), 0, 0, INTER_LINEAR);
+    for (int i=0; i<2; i++) {
+        camera[i].GrabBackgroundFrame();
+    }
 
-    QImage imdisplay2((uchar*)temp.data, temp.cols, temp.rows, temp.step, QImage::Format_RGB888);
-    ui->VideoPreview_2->setPixmap(QPixmap::fromImage(imdisplay2));
 }
 
 void MainWindow::on_recordButton_clicked()
@@ -369,13 +154,6 @@ void MainWindow::on_recordButton_clicked()
         } else if (ui->compression_h265->isChecked()){
             gstream_options.append (" ! nvh265enc");
         }
-        gstream_options.append(" ! filesink location=");
-        if (ui->saveFilename->text().isNull()) {
-            gstream_options += "output.avi";
-        } else {
-          gstream_options += (ui->saveFilename->text());
-        }
-        cout << gstream_options.toUtf8().constData() << endl;
 
         format = QJsonValue::fromVariant(ui->captureFormatOptions->itemData(ui->captureFormatOptions->currentIndex())).toString();
         cout << "FORMAT SELECTED: " << format.toStdString() << endl;
@@ -383,21 +161,20 @@ void MainWindow::on_recordButton_clicked()
         if (format=="RGB8") {
            fps = 136;
         }
-        writer.open(gstream_options.toUtf8().constData(),CAP_GSTREAMER,0,fps, Size(3208,2200));
+        QString baseDir(ui->saveFilename->text());
+        QString timeFormat = "yyyy-MM-dd_HH:mm";
+        QDateTime timestamp = QDateTime::currentDateTime();
+        baseDir += QString("/%1").arg(timestamp.toString(timeFormat));
+        QDir().mkdir(baseDir);
 
-        cout << writer.isOpened() << endl;
-       // if (writer.isOpened()) {
-         //   cout << "Writer not initializWed properly";
-      //  } else {
+        for (int i=0; i<2; i++) {
+            camera[i].SetDeviceInfoIndex(i);
+            camera[i].SetupCamera();
+            camera[i].setOutputLocation(baseDir);
+            camera[i].InitRecord(gstream_options, fps);
+            camera[i].StartRecord();
+        }
 
-            // get format so we can set up the camera properly
-
-            SetupCamera();
-
-            timer = new QTimer (this);
-            connect(timer, SIGNAL(timeout()), this, SLOT(PipeCameraFrame()));
-            timer->start(5);
-       // }
     } else {
         recording = false;
 
@@ -405,18 +182,10 @@ void MainWindow::on_recordButton_clicked()
         ui->recordButton->setIcon(QIcon::fromTheme("media-record"));
         ui->recordButton->setText("Record");
 
-       // if (writer.isOpened()) {
-            timer->stop();
-            EVT_CameraExecuteCommand(&camera, "AcquisitionStop");
-
-            for(int frame_count=0;frame_count<30;frame_count++) {
-                EVT_ReleaseFrameBuffer(&camera, &evtFrame[frame_count]);
-            }
-
-            EVT_CameraCloseStream(&camera);
-            EVT_CameraClose(&camera);
-        //}
-        writer.release();
+        for (int i=0; i<2; i++) {
+           camera[i].StopCamera();
+           camera[i].ReleaseWriter();
+        }
     }
 }
 
@@ -430,26 +199,32 @@ void MainWindow::on_previewButton_clicked()
         ui->previewButton->setText("Stop Preview");
         preview = true;
         settings->setLatestValues(ui);
-        SetupCamera();
+        for (int i=0; i<2; i++) {
+            camera[i].SetDeviceInfoIndex(i);
+            camera[1].setFormat(format);
+            camera[i].SetupCamera();
+            camera[i].setPreviewFrame(previewWindow[i]);
+            camera[i].setBackgroundWindow(backgroundWindow[i]);
+            camera[i].setTrackingWindow(trackingWindow[i]);
+        }
 
-        timer = new QTimer (this);
-        connect(timer, SIGNAL(timeout()), this, SLOT(DisplayPreview()));
-        timer->start(5);
+        QString connectedCameras;
+        for (int i=0; i<2; i++) {
+            connectedCameras += camera[i].getName() + "\n";
+        }
+        ui->connectedCameras->setText(connectedCameras);
+
+        for (int i=0; i<2; i++) {
+            camera[i].StartPreview();
+        }
     } else {
         preview = false;
 
         ui->previewButton->setIcon(QIcon::fromTheme("camera_photo"));
         ui->previewButton->setText("Preview");
-        timer->stop();
-
-        EVT_CameraExecuteCommand(&camera, "AcquisitionStop");
-
-        for(int frame_count=0;frame_count<30;frame_count++) {
-                EVT_ReleaseFrameBuffer(&camera, &evtFrame[frame_count]);
+        for (int i=0; i<2; i++) {
+            camera[i].StopCamera();
         }
-
-        EVT_CameraCloseStream(&camera);
-        EVT_CameraClose(&camera);
     }
 
 }

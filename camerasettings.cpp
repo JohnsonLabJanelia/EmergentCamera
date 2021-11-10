@@ -10,17 +10,12 @@ CameraSettings::CameraSettings()
 }
 
 void CameraSettings::setLatestValues(Ui::MainWindow *ui) {
-    if (ui->h264_checkbox->isChecked()) {
+    if (ui->compression_h264->isChecked()) {
         compression = "h264";
     } else {
         compression = "none";
     }
     location = QJsonValue::fromVariant(ui->saveFilename->text()).toString();
-    QString resolution = QJsonValue::fromVariant(ui->resolutionOptions->itemData(ui->resolutionOptions->currentIndex())).toString();
-    QStringList resList = resolution.split("x");
-    width = resList[0];
-    height = resList[1];
-    fps = QJsonValue::fromVariant(ui->fps_options->itemData(ui->fps_options->currentIndex())).toString();
 }
 
 QString CameraSettings::getCompression() {

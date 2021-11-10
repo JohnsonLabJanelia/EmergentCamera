@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1032</width>
-    <height>817</height>
+    <width>1691</width>
+    <height>1410</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -17,8 +17,8 @@
    <widget class="QToolButton" name="recordButton">
     <property name="geometry">
      <rect>
-      <x>870</x>
-      <y>280</y>
+      <x>1500</x>
+      <y>390</y>
       <width>81</width>
       <height>41</height>
      </rect>
@@ -26,16 +26,12 @@
     <property name="text">
      <string>Record</string>
     </property>
-    <property name="icon">
-     <iconset theme="Record">
-      <normaloff>.</normaloff>.</iconset>
-    </property>
    </widget>
    <widget class="QToolButton" name="previewButton">
     <property name="geometry">
      <rect>
-      <x>770</x>
-      <y>280</y>
+      <x>1400</x>
+      <y>390</y>
       <width>81</width>
       <height>41</height>
      </rect>
@@ -44,11 +40,11 @@
      <string>Preview</string>
     </property>
    </widget>
-   <widget class="QLabel" name="VideoPreview">
+   <widget class="QLabel" name="Camera1_Preview">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>30</y>
+      <x>30</x>
+      <y>60</y>
       <width>561</width>
       <height>316</height>
      </rect>
@@ -60,8 +56,8 @@
    <widget class="QPushButton" name="loadOptions">
     <property name="geometry">
      <rect>
-      <x>650</x>
-      <y>340</y>
+      <x>1280</x>
+      <y>450</y>
       <width>131</width>
       <height>27</height>
      </rect>
@@ -73,8 +69,8 @@
    <widget class="QPushButton" name="saveOptions">
     <property name="geometry">
      <rect>
-      <x>800</x>
-      <y>340</y>
+      <x>1430</x>
+      <y>450</y>
       <width>131</width>
       <height>27</height>
      </rect>
@@ -83,25 +79,12 @@
      <string>Save Options</string>
     </property>
    </widget>
-   <widget class="QLabel" name="resolutionLabel_2">
-    <property name="geometry">
-     <rect>
-      <x>300</x>
-      <y>0</y>
-      <width>61</width>
-      <height>27</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Preview</string>
-    </property>
-   </widget>
    <widget class="Line" name="line">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>20</y>
-      <width>561</width>
+      <x>20</x>
+      <y>50</y>
+      <width>1151</width>
       <height>20</height>
      </rect>
     </property>
@@ -112,9 +95,9 @@
    <widget class="Line" name="line_2">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>340</y>
-      <width>561</width>
+      <x>20</x>
+      <y>370</y>
+      <width>1151</width>
       <height>20</height>
      </rect>
     </property>
@@ -125,10 +108,10 @@
    <widget class="Line" name="line_3">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>30</y>
+      <x>10</x>
+      <y>60</y>
       <width>20</width>
-      <height>311</height>
+      <height>671</height>
      </rect>
     </property>
     <property name="orientation">
@@ -139,9 +122,9 @@
     <property name="geometry">
      <rect>
       <x>580</x>
-      <y>30</y>
+      <y>60</y>
       <width>20</width>
-      <height>311</height>
+      <height>671</height>
      </rect>
     </property>
     <property name="orientation">
@@ -151,8 +134,8 @@
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
-      <x>610</x>
-      <y>30</y>
+      <x>1240</x>
+      <y>140</y>
       <width>353</width>
       <height>101</height>
      </rect>
@@ -187,11 +170,11 @@
      </item>
     </layout>
    </widget>
-   <widget class="QLabel" name="VideoPreview_2">
+   <widget class="QLabel" name="Background1">
     <property name="geometry">
      <rect>
-      <x>30</x>
-      <y>370</y>
+      <x>60</x>
+      <y>940</y>
       <width>261</width>
       <height>161</height>
      </rect>
@@ -203,10 +186,10 @@
    <widget class="Line" name="line_5">
     <property name="geometry">
      <rect>
-      <x>310</x>
-      <y>360</y>
+      <x>320</x>
+      <y>930</y>
       <width>20</width>
-      <height>171</height>
+      <height>361</height>
      </rect>
     </property>
     <property name="orientation">
@@ -216,10 +199,10 @@
    <widget class="Line" name="line_6">
     <property name="geometry">
      <rect>
-      <x>20</x>
-      <y>370</y>
+      <x>30</x>
+      <y>930</y>
       <width>20</width>
-      <height>171</height>
+      <height>361</height>
      </rect>
     </property>
     <property name="orientation">
@@ -229,21 +212,21 @@
    <widget class="Line" name="line_7">
     <property name="geometry">
      <rect>
-      <x>580</x>
-      <y>370</y>
+      <x>590</x>
+      <y>930</y>
       <width>20</width>
-      <height>171</height>
+      <height>361</height>
      </rect>
     </property>
     <property name="orientation">
      <enum>Qt::Vertical</enum>
     </property>
    </widget>
-   <widget class="QLabel" name="VideoPreview_3">
+   <widget class="QLabel" name="Tracking1">
     <property name="geometry">
      <rect>
-      <x>330</x>
-      <y>360</y>
+      <x>60</x>
+      <y>1120</y>
       <width>261</width>
       <height>161</height>
      </rect>
@@ -255,8 +238,8 @@
    <widget class="QToolButton" name="frameGrabButton">
     <property name="geometry">
      <rect>
-      <x>620</x>
-      <y>280</y>
+      <x>1250</x>
+      <y>390</y>
       <width>131</width>
       <height>41</height>
      </rect>
@@ -265,14 +248,14 @@
      <string>Grab Background</string>
     </property>
     <property name="text">
-     <string>Grab Background</string>
+     <string>Tracking</string>
     </property>
    </widget>
    <widget class="QGroupBox" name="groupBox">
     <property name="geometry">
      <rect>
-      <x>610</x>
-      <y>130</y>
+      <x>1240</x>
+      <y>240</y>
       <width>201</width>
       <height>101</height>
      </rect>
@@ -320,13 +303,292 @@
      </property>
     </widget>
    </widget>
+   <widget class="QLabel" name="Camera2_Preview">
+    <property name="geometry">
+     <rect>
+      <x>600</x>
+      <y>60</y>
+      <width>561</width>
+      <height>316</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="Line" name="line_8">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>920</y>
+      <width>1121</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
+   </widget>
+   <widget class="Line" name="line_9">
+    <property name="geometry">
+     <rect>
+      <x>1160</x>
+      <y>60</y>
+      <width>20</width>
+      <height>671</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Vertical</enum>
+    </property>
+   </widget>
+   <widget class="QLabel" name="resolutionLabel_3">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>840</y>
+      <width>171</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>30</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Tracking</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="resolutionLabel_4">
+    <property name="geometry">
+     <rect>
+      <x>10</x>
+      <y>0</y>
+      <width>171</width>
+      <height>51</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <pointsize>30</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Preview</string>
+    </property>
+   </widget>
+   <widget class="QLabel" name="captureFormatLabel_2">
+    <property name="geometry">
+     <rect>
+      <x>1210</x>
+      <y>60</y>
+      <width>151</width>
+      <height>31</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Connected Cameras:</string>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+    </property>
+    <property name="wordWrap">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Camera3_Preview">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>390</y>
+      <width>561</width>
+      <height>316</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="Line" name="line_13">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>720</y>
+      <width>1151</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Camera4_Preview">
+    <property name="geometry">
+     <rect>
+      <x>600</x>
+      <y>390</y>
+      <width>561</width>
+      <height>316</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="connectedCameras">
+    <property name="geometry">
+     <rect>
+      <x>1370</x>
+      <y>70</y>
+      <width>161</width>
+      <height>131</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="alignment">
+     <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Background2">
+    <property name="geometry">
+     <rect>
+      <x>340</x>
+      <y>940</y>
+      <width>261</width>
+      <height>161</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Background3">
+    <property name="geometry">
+     <rect>
+      <x>610</x>
+      <y>930</y>
+      <width>261</width>
+      <height>161</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Background4">
+    <property name="geometry">
+     <rect>
+      <x>890</x>
+      <y>930</y>
+      <width>261</width>
+      <height>161</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="Line" name="line_10">
+    <property name="geometry">
+     <rect>
+      <x>870</x>
+      <y>930</y>
+      <width>20</width>
+      <height>361</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Vertical</enum>
+    </property>
+   </widget>
+   <widget class="Line" name="line_11">
+    <property name="geometry">
+     <rect>
+      <x>1150</x>
+      <y>930</y>
+      <width>20</width>
+      <height>361</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Vertical</enum>
+    </property>
+   </widget>
+   <widget class="Line" name="line_12">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>1100</y>
+      <width>1121</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
+   </widget>
+   <widget class="Line" name="line_14">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>1280</y>
+      <width>1121</width>
+      <height>20</height>
+     </rect>
+    </property>
+    <property name="orientation">
+     <enum>Qt::Horizontal</enum>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Tracking2">
+    <property name="geometry">
+     <rect>
+      <x>330</x>
+      <y>1120</y>
+      <width>261</width>
+      <height>161</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Tracking3">
+    <property name="geometry">
+     <rect>
+      <x>610</x>
+      <y>1120</y>
+      <width>261</width>
+      <height>161</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
+   <widget class="QLabel" name="Tracking4">
+    <property name="geometry">
+     <rect>
+      <x>890</x>
+      <y>1120</y>
+      <width>261</width>
+      <height>161</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1032</width>
+     <width>1691</width>
      <height>22</height>
     </rect>
    </property>
