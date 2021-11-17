@@ -10,7 +10,7 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = Video_Grabber
 TEMPLATE = app
-INCLUDEPATH += /usr/local/include/opencv4 /opt/EVT/eSDK/include /usr/lib/x86_64-linux-gnu/gstreamer-1.0
+INCLUDEPATH += /usr/include/opencv4 /opt/EVT/eSDK/include /usr/lib/x86_64-linux-gnu/gstreamer-1.0
 LIBS += -L/opt/EVT/eSDK/lib/ -lpthread -lEmergentCamera  -lEmergentGenICam -lEmergentGigEVision -lopencv_core -lopencv_bgsegm -lopencv_imgcodecs -lgstreamer-1.0 -lopencv_imgproc -lopencv_video -lopencv_highgui -lopencv_videoio
 SOURCES += main.cpp\
         mainwindow.cpp \
