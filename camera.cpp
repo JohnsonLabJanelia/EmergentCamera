@@ -51,6 +51,16 @@ void Camera::setFormat(const QString &value)
     format = value;
 }
 
+void Camera::setFrameRate(int value)
+{
+    frame_rate = value;
+}
+
+int Camera::getFrameRate()
+{
+    return frame_rate;
+}
+
 void Camera::cleanUpCamera()
 {
 
@@ -148,7 +158,10 @@ void Camera::SetupCamera() {
 
         EVT_CameraGetUInt32ParamMax(&camera, "FrameRate", &frame_rate_max);
 
-        frame_rate = frame_rate_max;
+        if(frame_rate > frame_rate_max){
+            setFrameRate(frame_rate_max);
+        }
+
         EVT_CameraSetUInt32Param(&camera, "FrameRate", frame_rate);
 
         printf("FrameRate Set: \t\t%d\n", frame_rate);
