@@ -6,45 +6,19 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1691</width>
-    <height>1410</height>
+    <width>2007</width>
+    <height>1603</height>
    </rect>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralWidget">
-   <widget class="QToolButton" name="recordButton">
-    <property name="geometry">
-     <rect>
-      <x>1500</x>
-      <y>390</y>
-      <width>81</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Record</string>
-    </property>
-   </widget>
-   <widget class="QToolButton" name="previewButton">
-    <property name="geometry">
-     <rect>
-      <x>1400</x>
-      <y>390</y>
-      <width>81</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Preview</string>
-    </property>
-   </widget>
    <widget class="QLabel" name="Camera1_Preview">
     <property name="geometry">
      <rect>
       <x>30</x>
-      <y>60</y>
+      <y>100</y>
       <width>561</width>
       <height>316</height>
      </rect>
@@ -53,37 +27,11 @@
      <string/>
     </property>
    </widget>
-   <widget class="QPushButton" name="loadOptions">
-    <property name="geometry">
-     <rect>
-      <x>1280</x>
-      <y>450</y>
-      <width>131</width>
-      <height>27</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Load Options</string>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="saveOptions">
-    <property name="geometry">
-     <rect>
-      <x>1430</x>
-      <y>450</y>
-      <width>131</width>
-      <height>27</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Save Options</string>
-    </property>
-   </widget>
    <widget class="Line" name="line">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>50</y>
+      <y>90</y>
       <width>1151</width>
       <height>20</height>
      </rect>
@@ -96,7 +44,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>370</y>
+      <y>410</y>
       <width>1151</width>
       <height>20</height>
      </rect>
@@ -109,7 +57,7 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>60</y>
+      <y>100</y>
       <width>20</width>
       <height>671</height>
      </rect>
@@ -122,7 +70,7 @@
     <property name="geometry">
      <rect>
       <x>580</x>
-      <y>60</y>
+      <y>100</y>
       <width>20</width>
       <height>671</height>
      </rect>
@@ -134,31 +82,31 @@
    <widget class="QWidget" name="layoutWidget">
     <property name="geometry">
      <rect>
-      <x>1240</x>
-      <y>140</y>
-      <width>353</width>
-      <height>101</height>
+      <x>1230</x>
+      <y>120</y>
+      <width>741</width>
+      <height>272</height>
      </rect>
     </property>
     <layout class="QFormLayout" name="formLayout">
-     <item row="0" column="0">
+     <item row="1" column="0">
       <widget class="QLabel" name="captureFormatLabel">
        <property name="text">
-        <string>Capture Format:</string>
+        <string>PixelFormat:</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="1">
+     <item row="1" column="1">
       <widget class="QComboBox" name="captureFormatOptions"/>
      </item>
-     <item row="1" column="0">
+     <item row="2" column="0">
       <widget class="QPushButton" name="saveLocation">
        <property name="text">
         <string>Save Location</string>
        </property>
       </widget>
      </item>
-     <item row="4" column="1">
+     <item row="2" column="1">
       <widget class="QLabel" name="saveFilename">
        <property name="text">
         <string/>
@@ -167,6 +115,26 @@
         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
       </widget>
+     </item>
+     <item row="3" column="0">
+      <widget class="QLabel" name="exposureLabel">
+       <property name="text">
+        <string>Exposure</string>
+       </property>
+      </widget>
+     </item>
+     <item row="3" column="1">
+      <widget class="QLineEdit" name="exposureLineEdit"/>
+     </item>
+     <item row="4" column="0">
+      <widget class="QLabel" name="frameRateLabel">
+       <property name="text">
+        <string>FrameRate</string>
+       </property>
+      </widget>
+     </item>
+     <item row="4" column="1">
+      <widget class="QLineEdit" name="frameRateLineEdit"/>
      </item>
     </layout>
    </widget>
@@ -235,79 +203,11 @@
      <string/>
     </property>
    </widget>
-   <widget class="QToolButton" name="frameGrabButton">
-    <property name="geometry">
-     <rect>
-      <x>1250</x>
-      <y>390</y>
-      <width>131</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <property name="toolTip">
-     <string>Grab Background</string>
-    </property>
-    <property name="text">
-     <string>Tracking</string>
-    </property>
-   </widget>
-   <widget class="QGroupBox" name="groupBox">
-    <property name="geometry">
-     <rect>
-      <x>1240</x>
-      <y>240</y>
-      <width>201</width>
-      <height>101</height>
-     </rect>
-    </property>
-    <property name="title">
-     <string>Compression Type</string>
-    </property>
-    <widget class="QRadioButton" name="compression_h265">
-     <property name="geometry">
-      <rect>
-       <x>0</x>
-       <y>70</y>
-       <width>157</width>
-       <height>23</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>H.265 Compression</string>
-     </property>
-    </widget>
-    <widget class="QRadioButton" name="compression_h264">
-     <property name="geometry">
-      <rect>
-       <x>0</x>
-       <y>50</y>
-       <width>157</width>
-       <height>23</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>H.264 Compression</string>
-     </property>
-    </widget>
-    <widget class="QRadioButton" name="compression_raw">
-     <property name="geometry">
-      <rect>
-       <x>0</x>
-       <y>30</y>
-       <width>137</width>
-       <height>23</height>
-      </rect>
-     </property>
-     <property name="text">
-      <string>No Compression</string>
-     </property>
-    </widget>
-   </widget>
    <widget class="QLabel" name="Camera2_Preview">
     <property name="geometry">
      <rect>
       <x>600</x>
-      <y>60</y>
+      <y>100</y>
       <width>561</width>
       <height>316</height>
      </rect>
@@ -333,7 +233,7 @@
     <property name="geometry">
      <rect>
       <x>1160</x>
-      <y>60</y>
+      <y>100</y>
       <width>20</width>
       <height>671</height>
      </rect>
@@ -342,66 +242,11 @@
      <enum>Qt::Vertical</enum>
     </property>
    </widget>
-   <widget class="QLabel" name="resolutionLabel_3">
-    <property name="geometry">
-     <rect>
-      <x>30</x>
-      <y>840</y>
-      <width>171</width>
-      <height>51</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>30</pointsize>
-     </font>
-    </property>
-    <property name="text">
-     <string>Tracking</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="resolutionLabel_4">
-    <property name="geometry">
-     <rect>
-      <x>10</x>
-      <y>0</y>
-      <width>171</width>
-      <height>51</height>
-     </rect>
-    </property>
-    <property name="font">
-     <font>
-      <pointsize>30</pointsize>
-     </font>
-    </property>
-    <property name="text">
-     <string>Preview</string>
-    </property>
-   </widget>
-   <widget class="QLabel" name="captureFormatLabel_2">
-    <property name="geometry">
-     <rect>
-      <x>1210</x>
-      <y>60</y>
-      <width>151</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Connected Cameras:</string>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-    </property>
-    <property name="wordWrap">
-     <bool>true</bool>
-    </property>
-   </widget>
    <widget class="QLabel" name="Camera3_Preview">
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>390</y>
+      <y>430</y>
       <width>561</width>
       <height>316</height>
      </rect>
@@ -414,7 +259,7 @@
     <property name="geometry">
      <rect>
       <x>20</x>
-      <y>720</y>
+      <y>760</y>
       <width>1151</width>
       <height>20</height>
      </rect>
@@ -427,29 +272,13 @@
     <property name="geometry">
      <rect>
       <x>600</x>
-      <y>390</y>
+      <y>430</y>
       <width>561</width>
       <height>316</height>
      </rect>
     </property>
     <property name="text">
      <string/>
-    </property>
-   </widget>
-   <widget class="QLabel" name="connectedCameras">
-    <property name="geometry">
-     <rect>
-      <x>1370</x>
-      <y>70</y>
-      <width>161</width>
-      <height>131</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-    <property name="alignment">
-     <set>Qt::AlignRight|Qt::AlignTop|Qt::AlignTrailing</set>
     </property>
    </widget>
    <widget class="QLabel" name="Background2">
@@ -582,16 +411,162 @@
      <string/>
     </property>
    </widget>
+   <widget class="QWidget" name="horizontalLayoutWidget_2">
+    <property name="geometry">
+     <rect>
+      <x>1230</x>
+      <y>30</y>
+      <width>561</width>
+      <height>80</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="horizontalLayout_2">
+     <item>
+      <widget class="QPushButton" name="SetCameraButton">
+       <property name="text">
+        <string>SetCamera</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="saveOptions">
+       <property name="text">
+        <string>Save Options</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="loadOptions">
+       <property name="text">
+        <string>Load Options</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+   <widget class="QPushButton" name="connectedCameras">
+    <property name="geometry">
+     <rect>
+      <x>1230</x>
+      <y>500</y>
+      <width>554</width>
+      <height>111</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Connected</string>
+    </property>
+   </widget>
+   <widget class="QToolButton" name="frameGrabButton">
+    <property name="geometry">
+     <rect>
+      <x>40</x>
+      <y>820</y>
+      <width>251</width>
+      <height>71</height>
+     </rect>
+    </property>
+    <property name="toolTip">
+     <string>Grab Background</string>
+    </property>
+    <property name="text">
+     <string>Tracking</string>
+    </property>
+   </widget>
+   <widget class="QToolButton" name="previewButton">
+    <property name="geometry">
+     <rect>
+      <x>20</x>
+      <y>20</y>
+      <width>251</width>
+      <height>61</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Preview</string>
+    </property>
+   </widget>
+   <widget class="QToolButton" name="recordButton">
+    <property name="geometry">
+     <rect>
+      <x>1240</x>
+      <y>790</y>
+      <width>261</width>
+      <height>71</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Record</string>
+    </property>
+   </widget>
+   <widget class="QGroupBox" name="groupBox">
+    <property name="geometry">
+     <rect>
+      <x>1530</x>
+      <y>790</y>
+      <width>311</width>
+      <height>181</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Compression Type</string>
+    </property>
+    <widget class="QRadioButton" name="compression_h265">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>90</y>
+       <width>281</width>
+       <height>31</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>H.265 Codec</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="compression_h264">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>130</y>
+       <width>241</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>H.264 Codec</string>
+     </property>
+    </widget>
+    <widget class="QRadioButton" name="compression_raw">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>50</y>
+       <width>281</width>
+       <height>23</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>No </string>
+     </property>
+    </widget>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1691</width>
-     <height>22</height>
+     <width>2007</width>
+     <height>39</height>
     </rect>
    </property>
+   <widget class="QMenu" name="menuCamera">
+    <property name="title">
+     <string>Camera</string>
+    </property>
+   </widget>
+   <addaction name="menuCamera"/>
   </widget>
   <widget class="QToolBar" name="mainToolBar">
    <attribute name="toolBarArea">

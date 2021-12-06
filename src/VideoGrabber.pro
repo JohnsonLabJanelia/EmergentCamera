@@ -14,12 +14,12 @@ INCLUDEPATH += /usr/include/opencv4 /opt/EVT/eSDK/include /usr/lib/x86_64-linux-
 LIBS += -L/opt/EVT/eSDK/lib/ -lpthread -lEmergentCamera  -lEmergentGenICam -lEmergentGigEVision -lopencv_core -lopencv_bgsegm -lopencv_imgcodecs -lgstreamer-1.0 -lopencv_imgproc -lopencv_video -lopencv_highgui -lopencv_videoio
 SOURCES += main.cpp\
     camera.cpp \
-        mainwindow.cpp \
-    camerasettings.cpp
+    mainwindow.cpp \
+camerasettings.cpp
 
 HEADERS  += mainwindow.h \
-    camera.h \
-    camerasettings.h
+camera.h \
+camerasettings.h
 
 FORMS    += mainwindow.ui
 

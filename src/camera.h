@@ -60,6 +60,8 @@ public:
     QString getFormat() const;
     QString getCameraName() const;
     void setFormat(const QString &value);
+    void setFrameRate(int frameRate);
+    int getFrameRate();
     void ConfigureEmergentCameraDefaults(CEmergentCamera *camera);
     CEmergentCamera* getEmergentCameraPtr();
     void ReleaseFrame(int frameIndex);

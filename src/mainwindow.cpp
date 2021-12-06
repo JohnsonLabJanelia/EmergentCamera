@@ -42,10 +42,11 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->captureFormatOptions->addItem("Bayer RGB","BayerRGB");
     ui->captureFormatOptions->addItem("YUV 422 Packed","YUV422Packed");
     ui->captureFormatOptions->addItem("RGB 8","RGB8");
-    ui->saveFilename->setText("/home/rob/Trials");
+    ui->saveFilename->setText("/home/red/Videos");
     ui->compression_h264->setChecked(true);
     ui->recordButton->setText("Record");
-
+    ui->frameRateLineEdit->setText("100");
+    ui->exposureLineEdit->setText("5000");
     previewWindow[0] = ui->Camera1_Preview;
     previewWindow[1] = ui->Camera2_Preview;
     previewWindow[2] = ui->Camera3_Preview;
@@ -157,10 +158,12 @@ void MainWindow::on_recordButton_clicked()
 
         format = QJsonValue::fromVariant(ui->captureFormatOptions->itemData(ui->captureFormatOptions->currentIndex())).toString();
         cout << "FORMAT SELECTED: " << format.toStdString() << endl;
-        int fps = 192;
-        if (format=="RGB8") {
-           fps = 136;
-        }
+
+        int fps = ui->frameRateLineEdit->text().toInt();
+        //int fps = 192;
+        //if (format=="RGB8") {
+        //   fps = 136;
+        //}
         QString baseDir(ui->saveFilename->text());
         QString timeFormat = "yyyy-MM-dd_HH:mm";
         QDateTime timestamp = QDateTime::currentDateTime();
@@ -169,7 +172,7 @@ void MainWindow::on_recordButton_clicked()
 
         for (int i=0; i<2; i++) {
             camera[i].SetDeviceInfoIndex(i);
-            camera[i].SetupCamera();
+            //camera[i].SetupCamera();
             camera[i].setOutputLocation(baseDir);
             camera[i].InitRecord(gstream_options, fps);
             camera[i].StartRecord();
@@ -192,17 +195,12 @@ void MainWindow::on_recordButton_clicked()
 void MainWindow::on_previewButton_clicked()
 {
     if (!preview) {
-        format = QJsonValue::fromVariant(ui->captureFormatOptions->itemData(ui->captureFormatOptions->currentIndex())).toString();
-        cout << "FORMAT SELECTED: " << format.toStdString() << endl;
-
         ui->previewButton->setIcon(QIcon::fromTheme("application-exit"));
         ui->previewButton->setText("Stop Preview");
         preview = true;
         settings->setLatestValues(ui);
         for (int i=0; i<2; i++) {
             camera[i].SetDeviceInfoIndex(i);
-            camera[1].setFormat(format);
-            camera[i].SetupCamera();
             camera[i].setPreviewFrame(previewWindow[i]);
             camera[i].setBackgroundWindow(backgroundWindow[i]);
             camera[i].setTrackingWindow(trackingWindow[i]);
@@ -228,3 +226,29 @@ void MainWindow::on_previewButton_clicked()
     }
 
 }
+
+void MainWindow::on_frameRateLineEdit_editingFinished()
+{
+    // set the framerate for cameras
+
+
+}
+
+
+void MainWindow::on_SetCameraButton_clicked()
+{
+    QString format = QJsonValue::fromVariant(ui->captureFormatOptions->itemData(ui->captureFormatOptions->currentIndex())).toString();
+    int frame_rate = ui->frameRateLineEdit->text().toInt();
+
+    cout << "FORMAT SELECTED: " << format.toStdString() << endl;
+    for (int i=0; i<2; i++) {
+        camera[i].SetDeviceInfoIndex(i);
+        camera[i].setFormat(format);
+        camera[i].setFrameRate(frame_rate);
+        camera[i].SetupCamera();
+        int updated_frame_rate = camera[i].getFrameRate();
+        ui->frameRateLineEdit->setText(QString::number(updated_frame_rate));
+    }
+
+}
+
