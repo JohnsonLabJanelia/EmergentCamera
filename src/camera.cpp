@@ -111,98 +111,85 @@ void Camera::ConfigureEmergentCameraDefaults(CEmergentCamera* camera) {
     EVT_CameraSetBoolParam(camera,      "AutoGain", false);
 }
 
-bool Camera::CheckEmergentCamera(GigEVisionDeviceInfo* deviceInfo) {
-    unsigned int listcam_buf_size = 2;
-    unsigned int count;
-    EVT_ListDevices(deviceInfo, &listcam_buf_size, &count);
-    if (count==0) {
-        printf("Enumerate Cameras: \tNo cameras found.\n");
-        return false;
-    }
-}
-
 void Camera::ReleaseFrame(int frameIndex) {
     EVT_ReleaseFrameBuffer(&camera, &evtFrame[frameIndex]);
 }
 
-void Camera::SetupCamera() {
-    struct GigEVisionDeviceInfo deviceInfo[MAX_CAMERAS];
-
-
+void Camera::SetupCamera(GigEVisionDeviceInfo* deviceInfo) {
     int ReturnVal = 0;
     int SUCCESS = 0;
     EVT_ERROR err = EVT_SUCCESS;
 
-    if (CheckEmergentCamera(deviceInfo)) {
-        Emergent::EVT_CameraOpen(&camera, &deviceInfo[deviceInfoIndex]);
-        name = deviceInfo[deviceInfoIndex].serialNumber;
-        name.prepend("Serial Number: ");
-        cout << name.toUtf8().constData() << endl;
+    Emergent::EVT_CameraOpen(&camera, &deviceInfo[deviceInfoIndex]);
+    name = deviceInfo[deviceInfoIndex].serialNumber;
+    name.prepend("Serial Number: ");
+    cout << name.toUtf8().constData() << endl;
 
-        if (ReturnVal != SUCCESS) {
-            printf("Open Camera: \t\tError");
-            return;
-        }
-
-        ConfigureEmergentCameraDefaults(&camera);
-        EVT_CameraGetUInt32ParamMax(&camera, "Height", &height_max);
-        EVT_CameraGetUInt32ParamMax(&camera, "Width" , &width_max);
-        printf("Resolution: \t\t%d x %d\n", width_max, height_max);
-        if (format == "RGB8") {
-            EVT_CameraSetEnumParam(&camera,      "PixelFormat", "RGB8Packed");
-        } else if (format == "BayerRGB") {
-            EVT_CameraSetEnumParam(&camera,      "PixelFormat", "BayerRG8");
-        } else {
-            EVT_CameraSetEnumParam(&camera,      "PixelFormat", "YUV422Packed");
-        }
-
-        EVT_CameraGetUInt32ParamMax(&camera, "FrameRate", &frame_rate_max);
-
-        if(frame_rate > frame_rate_max){
-            setFrameRate(frame_rate_max);
-        }
-
-        EVT_CameraSetUInt32Param(&camera, "FrameRate", frame_rate);
-
-        printf("FrameRate Set: \t\t%d\n", frame_rate);
-
-        //Prepare host side for streaming.
-        ReturnVal = EVT_CameraOpenStream(&camera);
-        if (ReturnVal != SUCCESS) {
-            printf("Opening Stream from Camera failing: \t\tError");
-            return;
-        }
-
-        for (int frame_count=0;frame_count<30;frame_count++) {
-            evtFrame[frame_count].size_x = width_max;
-            evtFrame[frame_count].size_y = height_max;
-            if (format == "RGB8") {
-                evtFrame[frame_count].pixel_type = GVSP_PIX_RGB8;
-            } else if (format == "BayerRGB") {
-                evtFrame[frame_count].pixel_type = GVSP_PIX_BAYRG8;
-            } else {
-                evtFrame[frame_count].pixel_type = GVSP_PIX_YUV422_PACKED;
-            }
-            err = EVT_AllocateFrameBuffer(&camera, &evtFrame[frame_count], EVT_FRAME_BUFFER_ZERO_COPY);
-            if(err) printf("EVT_AllocateFrameBuffer Error!\n");
-            err = EVT_CameraQueueFrame(&camera, &evtFrame[frame_count]);
-            if(err) printf("EVT_CameraQueueFrame Error!\n");
-        }
-
-        //Tell camera to start streaming
-        ReturnVal = EVT_CameraExecuteCommand(&camera, "AcquisitionStart");
-        if (ReturnVal != SUCCESS) {
-            printf("EVT_CameraExecuteCommand: Error\n");
-            return;
-        }
-
+    if (ReturnVal != SUCCESS) {
+        printf("Open Camera: \t\tError");
+        return;
     }
-    //set up tracker
-    //Ptr<Tracker> tracker = TrackerKCF::create();
+
+    ConfigureEmergentCameraDefaults(&camera);
+    EVT_CameraGetUInt32ParamMax(&camera, "Height", &height_max);
+    EVT_CameraGetUInt32ParamMax(&camera, "Width" , &width_max);
+    printf("Resolution: \t\t%d x %d\n", width_max, height_max);
+    if (format == "RGB8") {
+        EVT_CameraSetEnumParam(&camera,      "PixelFormat", "RGB8Packed");
+    } else if (format == "BayerRGB") {
+        EVT_CameraSetEnumParam(&camera,      "PixelFormat", "BayerRG8");
+    } else {
+        EVT_CameraSetEnumParam(&camera,      "PixelFormat", "YUV422Packed");
+    }
+
+    EVT_CameraGetUInt32ParamMax(&camera, "FrameRate", &frame_rate_max);
+
+    if(frame_rate > frame_rate_max){
+        setFrameRate(frame_rate_max);
+    }
+
+    EVT_CameraSetUInt32Param(&camera, "FrameRate", frame_rate);
+
+    printf("FrameRate Set: \t\t%d\n", frame_rate);
+
+    //Prepare host side for streaming.
+    ReturnVal = EVT_CameraOpenStream(&camera);
+    if (ReturnVal != SUCCESS) {
+        printf("Opening Stream from Camera failing: \t\tError");
+        return;
+    }
+
+    for (int frame_count=0;frame_count<30;frame_count++) {
+        evtFrame[frame_count].size_x = width_max;
+        evtFrame[frame_count].size_y = height_max;
+        if (format == "RGB8") {
+            evtFrame[frame_count].pixel_type = GVSP_PIX_RGB8;
+        } else if (format == "BayerRGB") {
+            evtFrame[frame_count].pixel_type = GVSP_PIX_BAYRG8;
+        } else {
+            evtFrame[frame_count].pixel_type = GVSP_PIX_YUV422_PACKED;
+        }
+        err = EVT_AllocateFrameBuffer(&camera, &evtFrame[frame_count], EVT_FRAME_BUFFER_ZERO_COPY);
+        if(err) printf("EVT_AllocateFrameBuffer Error!\n");
+        err = EVT_CameraQueueFrame(&camera, &evtFrame[frame_count]);
+        if(err) printf("EVT_CameraQueueFrame Error!\n");
+    }
+
+
+
 }
 
 void Camera::InitRecord(QString gstream_template, int fps)
 {
+    int ReturnVal = 0;
+    int SUCCESS = 0;
+    //Tell camera to start streaming
+    ReturnVal = EVT_CameraExecuteCommand(&camera, "AcquisitionStart");
+    if (ReturnVal != SUCCESS) {
+        printf("EVT_CameraExecuteCommand: Error\n");
+        return;
+    }
+
     QString recordOptions(gstream_template);
     recordOptions.append(" ! filesink location=");
     recordOptions += QString("%1/recordingOutput%2.avi").arg(outputLocation).arg(deviceInfoIndex);
@@ -217,6 +204,8 @@ void Camera::ReleaseWriter()
 }
 
 void Camera::DisplayPreview() {
+
+    //Tell camera to start streaming
     timeval startTime, endTime;
     gettimeofday(&startTime, NULL);
     int ReturnVal = 0;
@@ -338,6 +327,13 @@ void Camera::setPreviewFrame(QLabel *value)
 }
 
 void Camera::StartPreview() {
+    int ReturnVal = 0;
+    int SUCCESS = 0;
+    ReturnVal = EVT_CameraExecuteCommand(&camera, "AcquisitionStart");
+    if (ReturnVal != SUCCESS) {
+        printf("EVT_CameraExecuteCommand: Error\n");
+        return;
+    }
     timer = new QTimer (this);
     connect(timer, SIGNAL(timeout()), this, SLOT(DisplayPreview()));
     timer->start(5);
@@ -362,11 +358,6 @@ void Camera::GrabBackgroundFrame() {
 void Camera::StopCamera() {
     timer->stop();
     EVT_CameraExecuteCommand(&camera, "AcquisitionStop");
-
-    for(int frame_count=0;frame_count<30;frame_count++) {
-        ReleaseFrame(frame_count);
-    }
-
-    EVT_CameraCloseStream(&camera);
-    EVT_CameraClose(&camera);
 }
+
+

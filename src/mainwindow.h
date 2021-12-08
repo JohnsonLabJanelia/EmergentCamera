@@ -3,6 +3,7 @@
 
 #include <QtWidgets/QMainWindow>
 #include <QString>
+#include <QCheckBox>
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp>
 #include <opencv2/imgproc.hpp>
@@ -22,6 +23,7 @@
 using namespace cv;
 using namespace Emergent;
 #define MAX_WORKERS 8
+#define MAX_CAMERAS 6
 #define MAX_FRAMES 1000
 #define FRAMES_BUFFERS 30
 #define AVI_FRAME_COUNT 200 //Number of frames to save to AVI.
@@ -65,13 +67,17 @@ private slots:
 private:
     Ui::MainWindow *ui;
     cv::VideoCapture cap;
+
+    bool CheckEmergentCamera(GigEVisionDeviceInfo* deviceInfo);
     FILE *pipeout;
     unsigned int frame_rate_max, frame_rate_min, frame_rate_inc, frame_rate;
     unsigned int height_max, width_max;
     QTimer* timer;
     CameraSettings* settings;
     Ptr<BackgroundSubtractor> backSub;
-    Camera camera[2];
+    Camera camera[MAX_CAMERAS];
+    QCheckBox *cameraSelector[MAX_CAMERAS];
+    unsigned int cameras_found;
     CEmergentFrame evtFrameRecv, evtFrameConvert;
     QString format;
     bool recording = false;

@@ -424,7 +424,7 @@
      <item>
       <widget class="QPushButton" name="SetCameraButton">
        <property name="text">
-        <string>SetCamera</string>
+        <string>Init Camera(s)</string>
        </property>
       </widget>
      </item>
@@ -443,19 +443,6 @@
       </widget>
      </item>
     </layout>
-   </widget>
-   <widget class="QPushButton" name="connectedCameras">
-    <property name="geometry">
-     <rect>
-      <x>1230</x>
-      <y>500</y>
-      <width>554</width>
-      <height>111</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Connected</string>
-    </property>
    </widget>
    <widget class="QToolButton" name="frameGrabButton">
     <property name="geometry">
@@ -551,6 +538,19 @@
      </property>
     </widget>
    </widget>
+   <widget class="QGroupBox" name="connectedCamerasGroup">
+    <property name="geometry">
+     <rect>
+      <x>1220</x>
+      <y>430</y>
+      <width>621</width>
+      <height>221</height>
+     </rect>
+    </property>
+    <property name="title">
+     <string>Connected Cameras</string>
+    </property>
+   </widget>
   </widget>
   <widget class="QMenuBar" name="menuBar">
    <property name="geometry">
@@ -558,7 +558,7 @@
      <x>0</x>
      <y>0</y>
      <width>2007</width>
-     <height>39</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuCamera">

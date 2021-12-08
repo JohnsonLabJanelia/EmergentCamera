@@ -14,6 +14,7 @@
 #include <QJsonValue>
 #include <QtDebug>
 #include <QMessageBox>
+#include <QCheckBox>
 #include <QDateTime>
 #include <QDir>
 #include <QSize>
@@ -134,7 +135,7 @@ void MainWindow::on_saveOptions_clicked()
 
 void MainWindow::on_frameGrabButton_clicked()
 {
-    for (int i=0; i<2; i++) {
+    for (int i=0; i<cameras_found; i++) {
         camera[i].GrabBackgroundFrame();
     }
 
@@ -149,7 +150,7 @@ void MainWindow::on_recordButton_clicked()
         ui->recordButton->setText("Stop Record");
 
         // switch to nvh265enc for slower but better compression
-        QString gstream_options = "appsrc ! videoconvert n-threads=8";
+        QString gstream_options = "appsrc ! videoconvert n-threads=8 ! video/x-raw, framerate=100/1, width=3208, height=2200";
         if (ui->compression_h264->isChecked()) {
             gstream_options.append (" ! nvh264enc");
         } else if (ui->compression_h265->isChecked()){
@@ -170,9 +171,8 @@ void MainWindow::on_recordButton_clicked()
         baseDir += QString("/%1").arg(timestamp.toString(timeFormat));
         QDir().mkdir(baseDir);
 
-        for (int i=0; i<2; i++) {
+        for (int i=0; i<cameras_found; i++) {
             camera[i].SetDeviceInfoIndex(i);
-            //camera[i].SetupCamera();
             camera[i].setOutputLocation(baseDir);
             camera[i].InitRecord(gstream_options, fps);
             camera[i].StartRecord();
@@ -185,7 +185,7 @@ void MainWindow::on_recordButton_clicked()
         ui->recordButton->setIcon(QIcon::fromTheme("media-record"));
         ui->recordButton->setText("Record");
 
-        for (int i=0; i<2; i++) {
+        for (int i=0; i<cameras_found; i++) {
            camera[i].StopCamera();
            camera[i].ReleaseWriter();
         }
@@ -199,29 +199,18 @@ void MainWindow::on_previewButton_clicked()
         ui->previewButton->setText("Stop Preview");
         preview = true;
         settings->setLatestValues(ui);
-        for (int i=0; i<2; i++) {
-            camera[i].SetDeviceInfoIndex(i);
-            camera[i].setPreviewFrame(previewWindow[i]);
-            camera[i].setBackgroundWindow(backgroundWindow[i]);
-            camera[i].setTrackingWindow(trackingWindow[i]);
-        }
-
-        QString connectedCameras;
-        for (int i=0; i<2; i++) {
-            connectedCameras += camera[i].getName() + "\n";
-        }
-        ui->connectedCameras->setText(connectedCameras);
-
-        for (int i=0; i<2; i++) {
-            camera[i].StartPreview();
+        for (int i=0; i<cameras_found; i++) {
+            if (cameraSelector[i]->isChecked())
+                camera[i].StartPreview();
         }
     } else {
         preview = false;
 
         ui->previewButton->setIcon(QIcon::fromTheme("camera_photo"));
         ui->previewButton->setText("Preview");
-        for (int i=0; i<2; i++) {
-            camera[i].StopCamera();
+        for (int i=0; i<cameras_found; i++) {
+            if (cameraSelector[i]->isChecked())
+                camera[i].StopCamera();
         }
     }
 
@@ -235,20 +224,55 @@ void MainWindow::on_frameRateLineEdit_editingFinished()
 }
 
 
+bool MainWindow::CheckEmergentCamera(GigEVisionDeviceInfo* deviceInfo) {
+    unsigned int listcam_buf_size = MAX_CAMERAS;
+    EVT_ListDevices(deviceInfo, &listcam_buf_size, &cameras_found);
+    if (cameras_found==0) {
+        printf("Enumerate Cameras: \tNo cameras found.\n");
+        return false;
+    } else {
+        cout << cameras_found << " cameras found.\n";
+        return true;
+    }
+}
+
 void MainWindow::on_SetCameraButton_clicked()
 {
+    struct GigEVisionDeviceInfo deviceInfo[MAX_CAMERAS];
+    if (!CheckEmergentCamera(deviceInfo)) {
+        // take some fatal action
+        return;
+    }
+
     QString format = QJsonValue::fromVariant(ui->captureFormatOptions->itemData(ui->captureFormatOptions->currentIndex())).toString();
     int frame_rate = ui->frameRateLineEdit->text().toInt();
 
+    // find out the number of cameras and set up their indices
+
     cout << "FORMAT SELECTED: " << format.toStdString() << endl;
-    for (int i=0; i<2; i++) {
+    for (int i=0; i<cameras_found; i++) {
         camera[i].SetDeviceInfoIndex(i);
         camera[i].setFormat(format);
         camera[i].setFrameRate(frame_rate);
-        camera[i].SetupCamera();
+        camera[i].setPreviewFrame(previewWindow[i]);
+        camera[i].setBackgroundWindow(backgroundWindow[i]);
+        camera[i].setTrackingWindow(trackingWindow[i]);
+        camera[i].SetupCamera(deviceInfo);
         int updated_frame_rate = camera[i].getFrameRate();
         ui->frameRateLineEdit->setText(QString::number(updated_frame_rate));
     }
+
+    QVBoxLayout *vbox = new QVBoxLayout;
+    for (int i=0; i<cameras_found; i++) {
+        QString connectedCameras;
+        connectedCameras = camera[i].getName();
+
+       //ui->connectedCameras->setText(connectedCameras);
+        cameraSelector[i] = new QCheckBox(connectedCameras);
+        cameraSelector[i]->setCheckState(Qt::Checked);
+        vbox->addWidget(cameraSelector[i]);
+    }
+    ui->connectedCamerasGroup->setLayout(vbox);
 
 }
 

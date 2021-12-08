@@ -50,11 +50,10 @@ private:
     QLabel *trackingWindow;
 public:
     explicit Camera(QObject * parent = nullptr);
-    void SetupCamera();
+    void SetupCamera(GigEVisionDeviceInfo* deviceInfo);
     void InitRecord(QString recordOptions, int fps);
     void ReleaseWriter();
     void cleanUpCamera();
-    bool CheckEmergentCamera(GigEVisionDeviceInfo* deviceInfo);
     int GetDeviceInfoIndex();
     void SetDeviceInfoIndex(int index);
     QString getFormat() const;
