@@ -4,6 +4,7 @@
 #include <QtWidgets/QMainWindow>
 #include <QString>
 #include <QCheckBox>
+#include <QThread>
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp>
 #include <opencv2/imgproc.hpp>
@@ -72,7 +73,7 @@ private:
     FILE *pipeout;
     unsigned int frame_rate_max, frame_rate_min, frame_rate_inc, frame_rate;
     unsigned int height_max, width_max;
-    QTimer* timer;
+    QThread* cameraThreads[MAX_CAMERAS];
     CameraSettings* settings;
     Ptr<BackgroundSubtractor> backSub;
     Camera camera[MAX_CAMERAS];

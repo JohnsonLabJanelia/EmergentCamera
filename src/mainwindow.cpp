@@ -7,10 +7,10 @@
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgcodecs.hpp>
 #include <opencv2/bgsegm.hpp>
-#include <QTimer>
 #include <QFileDialog>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QtCore>
 #include <QJsonValue>
 #include <QtDebug>
 #include <QMessageBox>
@@ -150,7 +150,7 @@ void MainWindow::on_recordButton_clicked()
         ui->recordButton->setText("Stop Record");
 
         // switch to nvh265enc for slower but better compression
-        QString gstream_options = "appsrc ! videoconvert n-threads=8 ! video/x-raw, framerate=100/1, width=3208, height=2200";
+        QString gstream_options = "appsrc ! videoconvert n-threads=4 ";
         if (ui->compression_h264->isChecked()) {
             gstream_options.append (" ! nvh264enc");
         } else if (ui->compression_h265->isChecked()){
@@ -161,10 +161,6 @@ void MainWindow::on_recordButton_clicked()
         cout << "FORMAT SELECTED: " << format.toStdString() << endl;
 
         int fps = ui->frameRateLineEdit->text().toInt();
-        //int fps = 192;
-        //if (format=="RGB8") {
-        //   fps = 136;
-        //}
         QString baseDir(ui->saveFilename->text());
         QString timeFormat = "yyyy-MM-dd_HH:mm";
         QDateTime timestamp = QDateTime::currentDateTime();
@@ -172,10 +168,16 @@ void MainWindow::on_recordButton_clicked()
         QDir().mkdir(baseDir);
 
         for (int i=0; i<cameras_found; i++) {
-            camera[i].SetDeviceInfoIndex(i);
-            camera[i].setOutputLocation(baseDir);
-            camera[i].InitRecord(gstream_options, fps);
-            camera[i].StartRecord();
+            if (cameraSelector[i]->isChecked()) {
+                camera[i].SetDeviceInfoIndex(i);
+                camera[i].setOutputLocation(baseDir);
+                camera[i].InitRecord(gstream_options, fps);
+                cameraThreads[i] = new QThread;
+                camera[i].moveToThread(cameraThreads[i]);
+                connect(cameraThreads[i], SIGNAL(started()), &camera[i], SLOT(RecordVideo()));
+                connect(cameraThreads[i], SIGNAL(finished()), &camera[i], SLOT(StopCamera()));
+                cameraThreads[i]->start();
+            }
         }
 
     } else {
@@ -186,8 +188,11 @@ void MainWindow::on_recordButton_clicked()
         ui->recordButton->setText("Record");
 
         for (int i=0; i<cameras_found; i++) {
-           camera[i].StopCamera();
-           camera[i].ReleaseWriter();
+            if (cameraSelector[i]->isChecked()) {
+                cameraThreads[i]->quit();
+                camera[i].StopCamera();
+                camera[i].ReleaseWriter();
+            }
         }
     }
 }
@@ -200,8 +205,13 @@ void MainWindow::on_previewButton_clicked()
         preview = true;
         settings->setLatestValues(ui);
         for (int i=0; i<cameras_found; i++) {
-            if (cameraSelector[i]->isChecked())
-                camera[i].StartPreview();
+            if (cameraSelector[i]->isChecked()) {
+                cameraThreads[i] = new QThread;
+                camera[i].moveToThread(cameraThreads[i]);
+                connect(cameraThreads[i], SIGNAL(started()), &camera[i], SLOT(DisplayPreview()));
+                connect(cameraThreads[i], SIGNAL(finished()), &camera[i], SLOT(StopCamera()));
+                cameraThreads[i]->start();
+               }
         }
     } else {
         preview = false;
@@ -209,8 +219,10 @@ void MainWindow::on_previewButton_clicked()
         ui->previewButton->setIcon(QIcon::fromTheme("camera_photo"));
         ui->previewButton->setText("Preview");
         for (int i=0; i<cameras_found; i++) {
-            if (cameraSelector[i]->isChecked())
+            if (cameraSelector[i]->isChecked()) {
+                cameraThreads[i]->quit();
                 camera[i].StopCamera();
+            }
         }
     }
 

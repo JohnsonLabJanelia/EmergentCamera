@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 #include <QString>
+#include <QMutex>
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp>
 #include <opencv2/imgproc.hpp>
@@ -29,6 +30,7 @@ class Camera : public QObject
 public slots:
     void DisplayPreview();
     void RecordVideo();
+    void StopCamera();
 private:
     Q_OBJECT
     QTimer *timer;
@@ -48,6 +50,8 @@ private:
     QLabel *previewFrame;
     QLabel *backgroundWindow;
     QLabel *trackingWindow;
+    QMutex *mutex;
+    bool loop_stopped;
 public:
     explicit Camera(QObject * parent = nullptr);
     void SetupCamera(GigEVisionDeviceInfo* deviceInfo);
@@ -66,9 +70,7 @@ public:
     void ReleaseFrame(int frameIndex);
     void setPreviewFrame(QLabel *value);
 
-    void StartPreview();
     void StartRecord();
-    void StopCamera();
     QString getName() const;
     QString getOutputLocation() const;
     void setOutputLocation(const QString &value);
