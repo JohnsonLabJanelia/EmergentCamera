@@ -209,7 +209,7 @@ void MainWindow::on_previewButton_clicked()
                 cameraThreads[i] = new QThread;
                 camera[i].moveToThread(cameraThreads[i]);
                 connect(cameraThreads[i], SIGNAL(started()), &camera[i], SLOT(DisplayPreview()));
-                connect(cameraThreads[i], SIGNAL(finished()), &camera[i], SLOT(StopCamera()));
+               // connect(cameraThreads[i], SIGNAL(finished()), &camera[i], SLOT(StopCamera()));
                 cameraThreads[i]->start();
                }
         }
@@ -220,8 +220,8 @@ void MainWindow::on_previewButton_clicked()
         ui->previewButton->setText("Preview");
         for (int i=0; i<cameras_found; i++) {
             if (cameraSelector[i]->isChecked()) {
-                cameraThreads[i]->quit();
                 camera[i].StopCamera();
+                cameraThreads[i]->quit();
             }
         }
     }

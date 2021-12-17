@@ -216,6 +216,12 @@ void Camera::DisplayPreview() {
         return;
     }
     loop_stopped = false;
+    int refresh_counter = 0;
+    float frames_between_refresh;
+    if (frame_rate>60)
+        frames_between_refresh = ceil(frame_rate/60);
+    else
+        frames_between_refresh = 1;
 
     while (true) {
         // this part exits loop if bool is set to true
@@ -224,14 +230,23 @@ void Camera::DisplayPreview() {
             break;
         }
 
+
         //Tell camera to start streaming
-        timeval startTime, endTime;
-        gettimeofday(&startTime, NULL);
+       // timeval startTime, endTime;
+       // gettimeofday(&startTime, NULL);
         int ReturnVal = 0;
         ReturnVal = EVT_CameraGetFrame(&camera, &evtFrameRecv, EVT_INFINITE);
         if (ReturnVal !=0) {
             cout << "EVT_CameraQueueFrame Error! Error Code:" << ReturnVal << endl;
         }
+
+        // only display enough frames for 60fps output
+        refresh_counter++;
+        if (refresh_counter<frames_between_refresh) {
+            ReturnVal = EVT_CameraQueueFrame(&camera, &evtFrameRecv); //Re-queue.
+            continue;
+        }
+        refresh_counter = 0;
 
         cv::Mat frame;
         if (format == "RGB8") {
@@ -249,8 +264,8 @@ void Camera::DisplayPreview() {
         QImage imdisplay((uchar*)frame.data, frame.cols, frame.rows, frame.step, QImage::Format_RGB888);
         previewFrame->setPixmap(QPixmap::fromImage(imdisplay));
         ReturnVal = EVT_CameraQueueFrame(&camera, &evtFrameRecv); //Re-queue.
-        gettimeofday(&endTime, NULL);
-        float time_diff = (endTime.tv_sec  - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec)/1000000.0;
+       // gettimeofday(&endTime, NULL);
+        //float time_diff = (endTime.tv_sec  - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec)/1000000.0;
         // cout << "Device :" << deviceInfoIndex << "Processing Time: " << time_diff << endl;
 
 
@@ -286,6 +301,8 @@ void Camera::DisplayPreview() {
             trackingWindow->setPixmap(QPixmap::fromImage(imdisplay3));
         }
     }
+
+    this->moveToThread(QApplication::instance()->thread());
 }
 
 void Camera::RecordVideo() {
@@ -325,6 +342,8 @@ void Camera::RecordVideo() {
      //   cout << "Time of Conversion: " << time_diff << endl;
         ReturnVal = EVT_CameraQueueFrame(&camera, &evtFrameRecv); //Re-queue.
     }
+
+    this->moveToThread(QApplication::instance()->thread());
 }
 
 void Camera::setTrackingWindow(QLabel *value)
@@ -368,11 +387,11 @@ void Camera::GrabBackgroundFrame() {
 
 
 void Camera::StopCamera() {
-    this->moveToThread(QApplication::instance()->thread());
     //QMutexLocker locker(mutex);
     loop_stopped = true;
 
     EVT_CameraExecuteCommand(&camera, "AcquisitionStop");
+
 }
 
 
