@@ -4,7 +4,8 @@
 #include <QtWidgets/QMainWindow>
 #include <QString>
 #include <QCheckBox>
-#include <QThread>
+#include <QtConcurrent>
+#include <QThreadPool>
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp>
 #include <opencv2/imgproc.hpp>
@@ -64,22 +65,22 @@ private slots:
     void on_frameRateLineEdit_editingFinished();
 
     void on_SetCameraButton_clicked();
-
 private:
     Ui::MainWindow *ui;
     cv::VideoCapture cap;
 
+    bool loop_stopped;
     bool CheckEmergentCamera(GigEVisionDeviceInfo* deviceInfo);
     FILE *pipeout;
     unsigned int frame_rate_max, frame_rate_min, frame_rate_inc, frame_rate;
     unsigned int height_max, width_max;
-    QThread* cameraThreads[MAX_CAMERAS];
+    QThreadPool cameraThreadPool;
+    QFuture<void> cameraFutures[MAX_CAMERAS];
     CameraSettings* settings;
     Ptr<BackgroundSubtractor> backSub;
     Camera camera[MAX_CAMERAS];
     QCheckBox *cameraSelector[MAX_CAMERAS];
     unsigned int cameras_found;
-    CEmergentFrame evtFrameRecv, evtFrameConvert;
     QString format;
     bool recording = false;
     bool preview = false;

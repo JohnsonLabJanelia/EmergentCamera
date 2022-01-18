@@ -1,5 +1,4 @@
 #include "camera.h"
-#include "mainwindow.h"
 #include "ui_mainwindow.h"
 #include <opencv2/opencv.hpp>
 #include <opencv2/tracking.hpp>
@@ -14,8 +13,6 @@
 #include <QJsonValue>
 #include <QtDebug>
 #include <QMessageBox>
-#include <QMutex>
-#include <QMutexLocker>
 #include <QSize>
 #include <QProcess>
 #include <QLabel>
@@ -43,8 +40,9 @@ void Camera::SetDeviceInfoIndex(int index) {
     deviceInfoIndex = index;
 }
 
-QString Camera::getFormat() const
+QString Camera::getFormat()
 {
+    cout << format.toStdString() << endl;
     return format;
 }
 
@@ -61,11 +59,6 @@ void Camera::setFrameRate(int value)
 int Camera::getFrameRate()
 {
     return frame_rate;
-}
-
-void Camera::cleanUpCamera()
-{
-
 }
 
 CEmergentCamera* Camera::getEmergentCameraPtr() {
@@ -140,6 +133,8 @@ void Camera::SetupCamera(GigEVisionDeviceInfo* deviceInfo) {
         EVT_CameraSetEnumParam(&camera,      "PixelFormat", "RGB8Packed");
     } else if (format == "BayerRGB") {
         EVT_CameraSetEnumParam(&camera,      "PixelFormat", "BayerRG8");
+    } else if (format == "Grayscale") {
+        EVT_CameraSetEnumParam(&camera,      "PixelFormat", "BayerRG8");
     } else {
         EVT_CameraSetEnumParam(&camera,      "PixelFormat", "YUV422Packed");
     }
@@ -166,6 +161,8 @@ void Camera::SetupCamera(GigEVisionDeviceInfo* deviceInfo) {
         evtFrame[frame_count].size_y = height_max;
         if (format == "RGB8") {
             evtFrame[frame_count].pixel_type = GVSP_PIX_RGB8;
+        } else if (format == "Grayscale") {
+            evtFrame[frame_count].pixel_type = GVSP_PIX_BAYRG8;
         } else if (format == "BayerRGB") {
             evtFrame[frame_count].pixel_type = GVSP_PIX_BAYRG8;
         } else {
@@ -191,14 +188,97 @@ void Camera::InitRecord(QString gstream_template, int fps)
         printf("EVT_CameraExecuteCommand: Error\n");
         return;
     }
-    loop_stopped = false;
 
     QString recordOptions(gstream_template);
     recordOptions.append(" ! filesink location=");
     recordOptions += QString("%1/recordingOutput%2.mp4").arg(outputLocation).arg(deviceInfoIndex);
 
+    QString frameLoc = QString("%1/cameraMeta%2.json").arg(outputLocation).arg(deviceInfoIndex);
+    frameMeta.setFileName(frameLoc);
+    frameMeta.open(QIODevice::Append | QIODevice::Text);
+    frameMeta.write("[");
+
     cout << recordOptions.toUtf8().constData() << endl;
-    writer.open(recordOptions.toUtf8().constData(),CAP_GSTREAMER,0,fps, Size(3208,2200));
+    if (format=="Grayscale") {
+        writer.open(recordOptions.toUtf8().constData(),CAP_GSTREAMER,0,fps, Size(3208,2200), false);
+    } else {
+        writer.open(recordOptions.toUtf8().constData(),CAP_GSTREAMER,0,fps, Size(3208,2200));
+    }
+    loop_stopped = false;
+    QtConcurrent::run(this, &Camera::RecordVideo);
+}
+
+void Camera::InitPreview()
+{
+    int ReturnVal = 0;
+    int SUCCESS = 0;
+    //Tell camera to start streaming
+    ReturnVal = EVT_CameraExecuteCommand(&camera, "AcquisitionStart");
+    if (ReturnVal != SUCCESS) {
+        printf("EVT_CameraExecuteCommand: Error\n");
+        return;
+    }
+    loop_stopped = false;
+    QtConcurrent::run(this, &Camera::DisplayPreview);
+}
+
+void Camera::RecordVideo() {
+    int ReturnVal = 0;
+
+    CEmergentFrame evtFrameRecv, evtFrameConvert;
+    while (true) {
+        // TO DO: Set this up so it will only log for debug mode
+       // timeval startTime, endTime;
+      //  gettimeofday(&startTime, NULL);
+
+
+        if (loop_stopped) {
+            break;
+        }
+
+
+        ReturnVal = EVT_CameraGetFrame(&camera, &evtFrameRecv, EVT_INFINITE);
+        if (ReturnVal) {
+            printf("EVT_CameraQueueFrame Error!\n");
+            return;
+        }
+
+        QJsonObject frameInfo;
+        frameInfo["timestamp"] = QString::number(evtFrameRecv.timestamp) ;
+        frameInfo["frame_id"] = evtFrameRecv.frame_id;
+        QJsonDocument json_doc(frameInfo);
+        QString json_string = json_doc.toJson();
+        frameMeta.write(json_string.toLocal8Bit());
+        frameMeta.write(",");
+
+        cv::Mat frame;
+        if (format=="RGB8") {
+            frame = cv::Mat(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC3, evtFrameRecv.imagePtr);
+        } else if (format == "Grayscale") {
+            cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC1, evtFrameRecv.imagePtr);
+            cv::cvtColor(frameConvert,frame,COLOR_BayerRG2GRAY );
+        } else if (format == "BayerRGB") {
+            cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC1, evtFrameRecv.imagePtr);
+            cv::cvtColor(frameConvert,frame,COLOR_BayerRG2RGB );
+        } else {
+
+            cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC2, evtFrameRecv.imagePtr);
+            cv::cvtColor(frameConvert,frame,COLOR_YUV2BGR_Y422 );
+        }
+
+        writer.write(frame);
+        ReturnVal = EVT_CameraQueueFrame(&camera, &evtFrameRecv); //Re-queue.
+
+        //  gettimeofday(&endTime, NULL);
+       //   float time_diff = (endTime.tv_sec  - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec)/1000000.0;
+       //   cout << "Time of Conversion: " << time_diff << endl;
+    }
+
+    EVT_CameraExecuteCommand(&camera, "AcquisitionStop");
+
+    frameMeta.write("]");
+    frameMeta.close();
+
 }
 
 void Camera::ReleaseWriter()
@@ -209,13 +289,7 @@ void Camera::ReleaseWriter()
 void Camera::DisplayPreview() {
     int ReturnVal = 0;
     int SUCCESS = 0;
-    //Tell camera to start streaming
-    ReturnVal = EVT_CameraExecuteCommand(&camera, "AcquisitionStart");
-    if (ReturnVal != SUCCESS) {
-        printf("EVT_CameraExecuteCommand: Error\n");
-        return;
-    }
-    loop_stopped = false;
+
     int refresh_counter = 0;
     float frames_between_refresh;
     if (frame_rate>60)
@@ -224,12 +298,9 @@ void Camera::DisplayPreview() {
         frames_between_refresh = 1;
 
     while (true) {
-        // this part exits loop if bool is set to true
-        //QMutexLocker locker(mutex);
         if (loop_stopped) {
             break;
         }
-
 
         //Tell camera to start streaming
        // timeval startTime, endTime;
@@ -301,49 +372,11 @@ void Camera::DisplayPreview() {
             trackingWindow->setPixmap(QPixmap::fromImage(imdisplay3));
         }
     }
-
-    this->moveToThread(QApplication::instance()->thread());
-}
-
-void Camera::RecordVideo() {
-    int ReturnVal = 0;
-    while (true) {
-        // TO DO: Set this up so it will only log for debug mode
-       // timeval startTime, endTime;
-      //  gettimeofday(&startTime, NULL);
-
-        // this part exits loop if bool is set to true
-        //QMutexLocker locker(mutex);
-        if (loop_stopped) {
-            break;
-        }
-        ReturnVal = EVT_CameraGetFrame(&camera, &evtFrameRecv, EVT_INFINITE);
-        if (ReturnVal) {
-            printf("EVT_CameraQueueFrame Error!\n");
-            return;
-        }
-
-
-        cv::Mat frame;
-        if (format=="RGB8") {
-            frame = cv::Mat(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC3, evtFrameRecv.imagePtr);
-        } else if (format == "BayerRGB") {
-            cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC1, evtFrameRecv.imagePtr);
-            cv::cvtColor(frameConvert,frame,COLOR_BayerRG2RGB );
-        } else {
-            cv::Mat frameConvert(evtFrameRecv.size_y, evtFrameRecv.size_x, CV_8UC2, evtFrameRecv.imagePtr);
-            cv::cvtColor(frameConvert,frame,COLOR_YUV2BGR_Y422 );
-        }
-        writer.write(frame);
-
-
-      //  gettimeofday(&endTime, NULL);
-     //   float time_diff = (endTime.tv_sec  - startTime.tv_sec) + (endTime.tv_usec - startTime.tv_usec)/1000000.0;
-     //   cout << "Time of Conversion: " << time_diff << endl;
-        ReturnVal = EVT_CameraQueueFrame(&camera, &evtFrameRecv); //Re-queue.
+    ReturnVal = EVT_CameraExecuteCommand(&camera, "AcquisitionStop");
+    if (ReturnVal !=0) {
+        cout << "EVT_Acquisition STop Error! Error Code:" << ReturnVal << endl;
     }
 
-    this->moveToThread(QApplication::instance()->thread());
 }
 
 void Camera::setTrackingWindow(QLabel *value)
@@ -387,11 +420,18 @@ void Camera::GrabBackgroundFrame() {
 
 
 void Camera::StopCamera() {
-    //QMutexLocker locker(mutex);
     loop_stopped = true;
 
-    EVT_CameraExecuteCommand(&camera, "AcquisitionStop");
+}
 
+CEmergentCamera Camera::getCamera() const
+{
+    return camera;
+}
+
+cv::VideoWriter Camera::getWriter() const
+{
+    return writer;
 }
 
 

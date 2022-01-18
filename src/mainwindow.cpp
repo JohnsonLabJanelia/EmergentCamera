@@ -13,11 +13,13 @@
 #include <QtCore>
 #include <QJsonValue>
 #include <QtDebug>
+#include <QtConcurrent>
 #include <QMessageBox>
 #include <QCheckBox>
 #include <QDateTime>
 #include <QDir>
 #include <QSize>
+#include <QIODevice>
 #include <QProcess>
 #include <EmergentCameraAPIs.h>
 #include <emergentframe.h>
@@ -43,6 +45,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->captureFormatOptions->addItem("Bayer RGB","BayerRGB");
     ui->captureFormatOptions->addItem("YUV 422 Packed","YUV422Packed");
     ui->captureFormatOptions->addItem("RGB 8","RGB8");
+    ui->captureFormatOptions->addItem("Grayscale","Grayscale");
     ui->saveFilename->setText("/home/red/Videos");
     ui->compression_h264->setChecked(true);
     ui->recordButton->setText("Record");
@@ -167,16 +170,26 @@ void MainWindow::on_recordButton_clicked()
         baseDir += QString("/%1").arg(timestamp.toString(timeFormat));
         QDir().mkdir(baseDir);
 
+        loop_stopped = false;
+        QString sessionLoc(baseDir);
+        sessionLoc.append("/sessionInfo.json");
+        QFile sessionMeta(sessionLoc);
+        sessionMeta.open(QIODevice::WriteOnly | QIODevice::Text);
+
+        QJsonObject sessionMetaObj;
+        sessionMetaObj["Resolution"] = "3208x2200";
+        sessionMetaObj["Color Encoding"] = format ;
+        sessionMetaObj["Frames Per Second"] = QString::number(fps);
+        sessionMetaObj["Description"] = ui->sessionNotes->toPlainText();
+        QJsonDocument json_doc(sessionMetaObj);
+        QString json_string = json_doc.toJson();
+        sessionMeta.write(json_string.toLocal8Bit());
+        sessionMeta.close();
+
         for (int i=0; i<cameras_found; i++) {
             if (cameraSelector[i]->isChecked()) {
-                camera[i].SetDeviceInfoIndex(i);
                 camera[i].setOutputLocation(baseDir);
                 camera[i].InitRecord(gstream_options, fps);
-                cameraThreads[i] = new QThread;
-                camera[i].moveToThread(cameraThreads[i]);
-                connect(cameraThreads[i], SIGNAL(started()), &camera[i], SLOT(RecordVideo()));
-                connect(cameraThreads[i], SIGNAL(finished()), &camera[i], SLOT(StopCamera()));
-                cameraThreads[i]->start();
             }
         }
 
@@ -189,9 +202,7 @@ void MainWindow::on_recordButton_clicked()
 
         for (int i=0; i<cameras_found; i++) {
             if (cameraSelector[i]->isChecked()) {
-                cameraThreads[i]->quit();
                 camera[i].StopCamera();
-                camera[i].ReleaseWriter();
             }
         }
     }
@@ -206,12 +217,8 @@ void MainWindow::on_previewButton_clicked()
         settings->setLatestValues(ui);
         for (int i=0; i<cameras_found; i++) {
             if (cameraSelector[i]->isChecked()) {
-                cameraThreads[i] = new QThread;
-                camera[i].moveToThread(cameraThreads[i]);
-                connect(cameraThreads[i], SIGNAL(started()), &camera[i], SLOT(DisplayPreview()));
-               // connect(cameraThreads[i], SIGNAL(finished()), &camera[i], SLOT(StopCamera()));
-                cameraThreads[i]->start();
-               }
+                camera[i].InitPreview();
+            }
         }
     } else {
         preview = false;
@@ -221,7 +228,6 @@ void MainWindow::on_previewButton_clicked()
         for (int i=0; i<cameras_found; i++) {
             if (cameraSelector[i]->isChecked()) {
                 camera[i].StopCamera();
-                cameraThreads[i]->quit();
             }
         }
     }

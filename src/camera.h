@@ -19,6 +19,8 @@
 #include <sys/time.h>
 #include <QLabel>
 #include <QTimer>
+#include <QtConcurrent>
+#include <QThreadPool>
 #include <QObject>
 #include <opencv2/core/cvstd_wrapper.hpp>
 
@@ -29,8 +31,8 @@ class Camera : public QObject
 {
 public slots:
     void DisplayPreview();
-    void RecordVideo();
     void StopCamera();
+    void RecordVideo();
 private:
     Q_OBJECT
     QTimer *timer;
@@ -51,16 +53,17 @@ private:
     QLabel *backgroundWindow;
     QLabel *trackingWindow;
     QMutex *mutex;
+    QFile frameMeta;
     bool loop_stopped;
 public:
     explicit Camera(QObject * parent = nullptr);
     void SetupCamera(GigEVisionDeviceInfo* deviceInfo);
     void InitRecord(QString recordOptions, int fps);
+    void InitPreview();
     void ReleaseWriter();
-    void cleanUpCamera();
     int GetDeviceInfoIndex();
     void SetDeviceInfoIndex(int index);
-    QString getFormat() const;
+    QString getFormat();
     QString getCameraName() const;
     void setFormat(const QString &value);
     void setFrameRate(int frameRate);
@@ -77,6 +80,8 @@ public:
     void setBackgroundWindow(QLabel *value);
     void setTrackingWindow(QLabel *value);
     void GrabBackgroundFrame();
+    cv::VideoWriter getWriter() const;
+    CEmergentCamera getCamera() const;
 };
 
 #endif // CAMERA_H
